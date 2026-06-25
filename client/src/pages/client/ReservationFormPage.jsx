@@ -40,7 +40,10 @@ export default function ReservationFormPage() {
     startTime: prefilledDate ? `${prefilledDate}T08:00` : "",
     endTime: prefilledDate ? `${prefilledDate}T17:00` : "",
     notes: "",
+    pencilBooking: false,
   });
+
+  const selectedVenue = venues.find((v) => v.id === formData.venueId);
 
   useEffect(() => {
     venueService.getAll().then((res) => setVenues(res.data || [])).catch(() => {});
@@ -104,6 +107,23 @@ export default function ReservationFormPage() {
         </div>
 
         <Textarea id="notes" label="Additional Notes (optional)" name="notes" placeholder="Any special requests or requirements..." value={formData.notes} onChange={handleChange} rows={3} />
+
+        {selectedVenue?.allowPencilBooking && (
+          <div className="flex items-start gap-3 p-4 bg-red-900/10 border border-red-800/30 rounded-xl">
+            <input
+              type="checkbox"
+              id="pencilBooking"
+              name="pencilBooking"
+              checked={formData.pencilBooking}
+              onChange={(e) => setFormData({ ...formData, pencilBooking: e.target.checked })}
+              className="mt-1 h-4 w-4 accent-red-800 text-red-800 focus:ring-red-800 border-zinc-300 rounded"
+            />
+            <label htmlFor="pencilBooking" className="text-sm text-zinc-300 font-medium cursor-pointer">
+              <span className="block text-white font-semibold mb-0.5">Pencil Book this slot (Draft Status)</span>
+              This venue allows Pencil Bookings. Check this to hold this slot as a Draft. You will have 3 days to upload the required documents.
+            </label>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="ghost" type="button" onClick={() => navigate(-1)}>Cancel</Button>

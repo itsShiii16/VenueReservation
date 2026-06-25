@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
 import EmptyState from "../../components/EmptyState";
 import LoadingState from "../../components/LoadingState";
-import api from "../../services/api";
+import { db } from "../../services/mockDb";
 import { formatDateTime } from "../../utils/formatDate";
 
 export default function ApprovedManagersPage() {
@@ -13,12 +13,10 @@ export default function ApprovedManagersPage() {
   useEffect(() => {
     const fetchManagers = async () => {
       try {
-        const res = await api.get("/users");
-        if (res.success && Array.isArray(res.data)) {
-          // Filter to only display venue managers
-          const filtered = res.data.filter((u) => u.role === "VENUE_MANAGER");
-          setManagers(filtered);
-        }
+        const users = db.getUsers();
+        // Filter to only display venue managers
+        const filtered = users.filter((u) => u.role === "VENUE_MANAGER");
+        setManagers(filtered);
       } catch (error) {
         console.error("Failed to fetch managers:", error);
       } finally {

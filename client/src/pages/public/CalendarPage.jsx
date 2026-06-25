@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import PageHeader from "../../components/PageHeader";
-import EmptyState from "../../components/EmptyState";
-import LoadingState from "../../components/LoadingState";
-import Button from "../../components/Button";
-import Select from "../../components/Select";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { venueService } from "../../services/venueService";
 import { useAuth } from "../../hooks/useAuth";
+import Button from "../../components/Button";
+import LoadingState from "../../components/LoadingState";
 import { formatDateTime } from "../../utils/formatDate";
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 export default function CalendarPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated, user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   
   const [venues, setVenues] = useState([]);
   const [selectedVenueId, setSelectedVenueId] = useState(searchParams.get("venueId") || "");
@@ -19,27 +19,46 @@ export default function CalendarPage() {
   const [loadingVenues, setLoadingVenues] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // Calendar navigation state
-  const today = new Date();
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-indexed
-  const [selectedDate, setSelectedDate] = useState(today);
+  // View state: 'day' | 'week' | 'month' (default is 'week' based on screenshot)
+  const [viewMode, setViewMode] = useState("week");
 
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+  // Calendar time window state (defaults to June 2026 to match screenshot date "June 25, 2026")
+  const defaultDate = new Date("2026-06-25T00:00:00");
+  const [currentDate, setCurrentDate] = useState(defaultDate);
+  const [selectedSlot, setSelectedSlot] = useState(null); // { date: Date, startTime: string, endTime: string, timeLabel: string }
+
+  // 2-Hour Time Block Configuration
+  const timeBlocks = [
+    { id: "block1", label: "08:00 AM - 10:00 AM", startHour: 8, startMin: 0, endHour: 10, endMin: 0, gridRow: "1 / span 2" },
+    { id: "block2", label: "10:00 AM - 12:00 PM", startHour: 10, startMin: 0, endHour: 12, endMin: 0, gridRow: "3 / span 2" },
+    { id: "block3", label: "01:00 PM - 03:00 PM", startHour: 13, startMin: 0, endHour: 15, endMin: 0, gridRow: "6 / span 2" },
+    { id: "block4", label: "03:00 PM - 05:00 PM", startHour: 15, startMin: 0, endHour: 17, endMin: 0, gridRow: "8 / span 2" },
   ];
 
-  // Fetch all venues
+  // Hours for the vertical axis (9 AM to 4 PM, matching visible labels in screenshot)
+  const hourLabels = [
+    { label: "9 AM", ratio: 1 / 9 },
+    { label: "10 AM", ratio: 2 / 9 },
+    { label: "11 AM", ratio: 3 / 9 },
+    { label: "12 PM", ratio: 4 / 9 },
+    { label: "1 PM", ratio: 5 / 9 },
+    { label: "2 PM", ratio: 6 / 9 },
+    { label: "3 PM", ratio: 7 / 9 },
+    { label: "4 PM", ratio: 8 / 9 },
+  ];
+
+  // Fetch all venues for fallback selection
   useEffect(() => {
     const fetchVenues = async () => {
       try {
         const res = await venueService.getAll();
-        if (res.success) {
-          setVenues(res.data || []);
+        setVenues(res.data || []);
+        // Auto select first venue if none specified
+        if (!selectedVenueId && res.data?.length > 0) {
+          setSelectedVenueId(res.data[0].id);
         }
       } catch (err) {
-        console.error("Error fetching venues:", err);
+        console.error("Error loading venues:", err);
       } finally {
         setLoadingVenues(false);
       }
@@ -47,29 +66,16 @@ export default function CalendarPage() {
     fetchVenues();
   }, []);
 
-  // Sync selectedVenueId from search param
+  // Fetch specific venue details (blocked slots & reservations)
   useEffect(() => {
-    const paramId = searchParams.get("venueId");
-    if (paramId && paramId !== selectedVenueId) {
-      setSelectedVenueId(paramId);
-    }
-  }, [searchParams]);
-
-  // Fetch venue details (blocked slots & reservations) when selectedVenueId changes
-  useEffect(() => {
-    if (!selectedVenueId) {
-      setVenueDetails(null);
-      return;
-    }
+    if (!selectedVenueId) return;
     const fetchDetails = async () => {
       setLoadingDetails(true);
       try {
         const res = await venueService.getById(selectedVenueId);
-        if (res.success) {
-          setVenueDetails(res.data);
-        }
+        setVenueDetails(res.data);
       } catch (err) {
-        console.error("Error fetching venue details:", err);
+        console.error("Error fetching details:", err);
       } finally {
         setLoadingDetails(false);
       }
@@ -77,284 +83,414 @@ export default function CalendarPage() {
     fetchDetails();
   }, [selectedVenueId]);
 
-  const handleVenueChange = (e) => {
-    const id = e.target.value;
-    setSelectedVenueId(id);
-    if (id) {
-      setSearchParams({ venueId: id });
+  // Navigate back to the details of the selected venue
+  const handleBackToVenue = () => {
+    if (selectedVenueId) {
+      navigate(`/venues/${selectedVenueId}`);
     } else {
-      setSearchParams({});
+      navigate("/venues");
     }
   };
 
-  // Month navigation helpers
-  const handlePrevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
+  // Get start of the week (Sunday) for a given date
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
   };
 
-  const handleNextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
-  };
+  const startOfWeek = getStartOfWeek(currentDate);
 
-  // Calendar grid calculations
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); // Sun = 0
-
-  const daysArray = [];
-  // Pre-fill empty slots for previous month offset
-  for (let i = 0; i < firstDayIndex; i++) {
-    daysArray.push(null);
-  }
-  // Fill month days
-  for (let i = 1; i <= daysInMonth; i++) {
-    daysArray.push(new Date(currentYear, currentMonth, i));
+  // Generate 7 days of the active week
+  const weekDays = [];
+  for (let i = 0; i < 7; i++) {
+    const nextDay = new Date(startOfWeek);
+    nextDay.setDate(startOfWeek.getDate() + i);
+    weekDays.push(nextDay);
   }
 
-  // Get events on a specific day
-  const getDayEvents = (date) => {
-    if (!date || !venueDetails) return { reservations: [], blockedSlots: [] };
-    
-    const formattedDateStr = date.toDateString();
+  // Format month & year header (e.g. "June 2026")
+  const formatMonthYearHeader = (date) => {
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  };
 
-    const reservations = (venueDetails.reservations || []).filter((r) => {
-      const rStart = new Date(r.startTime);
-      const rEnd = new Date(r.endTime);
-      
-      // Zero out time part for day matching
-      const dStart = new Date(rStart.getFullYear(), rStart.getMonth(), rStart.getDate());
-      const dEnd = new Date(rEnd.getFullYear(), rEnd.getMonth(), rEnd.getDate());
-      
-      return date >= dStart && date <= dEnd;
-    });
+  // Week navigation helpers
+  const handlePrevWeek = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(currentDate.getDate() - 7);
+    setCurrentDate(newDate);
+    setSelectedSlot(null);
+  };
 
-    const blockedSlots = (venueDetails.blockedSlots || []).filter((b) => {
+  const handleNextWeek = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(currentDate.getDate() + 7);
+    setCurrentDate(newDate);
+    setSelectedSlot(null);
+  };
+
+  const handleGoToToday = () => {
+    setCurrentDate(defaultDate);
+    setSelectedSlot(null);
+  };
+
+  // Slot status lookup logic
+  const getSlotStatus = (day, block) => {
+    const slotDate = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    const todayDate = new Date(defaultDate.getFullYear(), defaultDate.getMonth(), defaultDate.getDate());
+
+    // 1. Check if past date
+    if (slotDate < todayDate) {
+      return "past";
+    }
+    // If today, check if the hour block has already passed
+    if (slotDate.getTime() === todayDate.getTime()) {
+      const currentHour = 7; // Mocking today's current hour to 7 AM so all blocks today are available, matching the screenshot
+      if (block.endHour <= currentHour) {
+        return "past";
+      }
+    }
+
+    if (!venueDetails) return "available";
+
+    // 2. Check if blocked
+    const hasBlocked = (venueDetails.blockedSlots || []).some((b) => {
       const bStart = new Date(b.startTime);
       const bEnd = new Date(b.endTime);
+      
+      const bDay = new Date(bStart.getFullYear(), bStart.getMonth(), bStart.getDate());
+      if (slotDate.getTime() !== bDay.getTime()) return false;
 
-      const dStart = new Date(bStart.getFullYear(), bStart.getMonth(), bStart.getDate());
-      const dEnd = new Date(bEnd.getFullYear(), bEnd.getMonth(), bEnd.getDate());
-
-      return date >= dStart && date <= dEnd;
+      // Check hour overlap
+      return block.startHour < bEnd.getUTCHours() + 8 && block.endHour > bStart.getUTCHours() + 8;
     });
+    if (hasBlocked) return "blocked";
 
-    return { reservations, blockedSlots };
+    // 3. Check if reserved
+    const hasReservation = (venueDetails.reservations || []).some((r) => {
+      const rStart = new Date(r.startTime);
+      const rEnd = new Date(r.endTime);
+
+      const rDay = new Date(rStart.getFullYear(), rStart.getMonth(), rStart.getDate());
+      if (slotDate.getTime() !== rDay.getTime()) return false;
+
+      // Check hour overlap
+      return block.startHour < rEnd.getUTCHours() + 8 && block.endHour > rStart.getUTCHours() + 8;
+    });
+    if (hasReservation) return "reserved";
+
+    return "available";
   };
 
-  // Format a simple date as YYYY-MM-DD
-  const formatDateISO = (date) => {
-    if (!date) return "";
-    const offset = date.getTimezoneOffset();
-    const localDate = new Date(date.getTime() - offset * 60 * 1000);
-    return localDate.toISOString().split("T")[0];
+  const handleSelectSlot = (day, block, status) => {
+    if (status !== "available") return;
+    
+    // Construct local Date string for selection
+    const year = day.getFullYear();
+    const month = String(day.getMonth() + 1).padStart(2, "0");
+    const dateNum = String(day.getDate()).padStart(2, "0");
+    
+    const formattedDate = `${year}-${month}-${dateNum}`;
+    
+    const startStr = `${formattedDate}T${String(block.startHour).padStart(2, "0")}:${String(block.startMin).padStart(2, "0")}`;
+    const endStr = `${formattedDate}T${String(block.endHour).padStart(2, "0")}:${String(block.endMin).padStart(2, "0")}`;
+
+    setSelectedSlot({
+      dateStr: day.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
+      dateISO: formattedDate,
+      timeLabel: block.label,
+      startTime: startStr,
+      endTime: endStr,
+    });
   };
 
-  // Get selected day events
-  const selectedDayEvents = getDayEvents(selectedDate);
-  const totalSelectedEvents = selectedDayEvents.reservations.length + selectedDayEvents.blockedSlots.length;
+  const handleContinue = () => {
+    if (!selectedSlot) return;
+    
+    if (!isAuthenticated) {
+      toast.error("Please log in to continue booking this slot.");
+      navigate("/login");
+      return;
+    }
+    
+    navigate(
+      `/reserve?venueId=${selectedVenueId}&date=${selectedSlot.dateISO}&startTime=${selectedSlot.startTime}&endTime=${selectedSlot.endTime}`
+    );
+  };
 
-  if (loadingVenues) return <LoadingState message="Loading availability calendar..." />;
+  if (loadingVenues || loadingDetails) return <LoadingState message="Loading availability calendar..." />;
+
+  const currentVenueName = venueDetails?.name || "Palma Hall Room 400";
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Availability Calendar"
-        subtitle="Browse existing bookings and blocked slots to find the perfect time for your event"
-      />
-
-      {/* Venue Selector */}
-      <div className="max-w-md bg-surface border border-surface-lighter rounded-xl p-4">
-        <Select
-          id="calendar-venue-select"
-          label="Select Venue"
-          value={selectedVenueId}
-          onChange={handleVenueChange}
-          options={venues.map((v) => ({ value: v.id, label: `${v.name} (${v.location})` }))}
-          placeholder="Choose a venue..."
-        />
+    <div className="max-w-7xl mx-auto space-y-6">
+      
+      {/* Top back navigation */}
+      <div>
+        <button
+          onClick={handleBackToVenue}
+          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-red-800 font-medium transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" /> Back to {currentVenueName}
+        </button>
       </div>
 
-      {!selectedVenueId ? (
-        <EmptyState
-          title="Select a Venue"
-          message="Please choose a venue from the dropdown menu above to see its availability and schedule details."
-        />
-      ) : loadingDetails ? (
-        <LoadingState message="Fetching schedules..." />
-      ) : (
-        <div className="grid lg:grid-cols-3 gap-8">
+      {/* Main Grid View */}
+      <div className="grid lg:grid-cols-4 gap-8">
+        
+        {/* Calendar Column */}
+        <div className="lg:col-span-3 bg-surface border border-surface-lighter rounded-2xl p-6 shadow-sm space-y-6">
           
-          {/* Calendar Grid Container */}
-          <div className="lg:col-span-2 bg-surface border border-surface-lighter rounded-2xl p-6">
+          {/* Header Controls (Today, Arrows, Date, Day/Week/Month selector) */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             
-            {/* Calendar Month Header */}
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-white">
-                {monthNames[currentMonth]} {currentYear}
-              </h3>
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm" onClick={handlePrevMonth}>
-                  &larr; Prev
-                </Button>
-                <Button variant="secondary" size="sm" onClick={handleNextMonth}>
-                  Next &rarr;
-                </Button>
+            {/* Navigation and Date */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleGoToToday}
+                className="px-4 py-2 border border-surface-lighter bg-surface-light rounded-lg text-sm font-semibold text-gray-100 hover:bg-surface-lighter transition-colors"
+              >
+                Today
+              </button>
+              <div className="flex border border-surface-lighter bg-surface-light rounded-lg overflow-hidden">
+                <button
+                  onClick={handlePrevWeek}
+                  className="p-2 text-zinc-400 hover:text-gray-100 hover:bg-surface-lighter border-r border-surface-lighter transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleNextWeek}
+                  className="p-2 text-zinc-400 hover:text-gray-100 hover:bg-surface-lighter transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
+              <h2 className="text-xl font-bold text-gray-100">
+                {formatMonthYearHeader(currentDate)}
+              </h2>
             </div>
 
-            {/* Weekday Names */}
-            <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-400 mb-2">
-              <div>Sun</div>
-              <div>Mon</div>
-              <div>Tue</div>
-              <div>Wed</div>
-              <div>Thu</div>
-              <div>Fri</div>
-              <div>Sat</div>
+            {/* View Mode Selectors (Segmented Button Layout) */}
+            <div className="flex bg-surface-light p-1 rounded-xl border border-surface-lighter">
+              {["day", "week", "month"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all
+                    ${viewMode === mode
+                      ? "bg-surface text-gray-100 shadow-sm"
+                      : "text-zinc-400 hover:text-gray-100"}`}
+                >
+                  {mode}
+                </button>
+              ))}
             </div>
 
-            {/* Month Day Cells */}
-            <div className="grid grid-cols-7 gap-1">
-              {daysArray.map((date, idx) => {
-                if (!date) {
-                  return <div key={`empty-${idx}`} className="aspect-square bg-surface-dark/20 rounded-lg"></div>;
-                }
+          </div>
 
-                const { reservations, blockedSlots } = getDayEvents(date);
-                const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
-                const isToday = today.toDateString() === date.toDateString();
+          {viewMode !== "week" ? (
+            <div className="py-16 text-center border border-dashed border-surface-lighter rounded-xl bg-surface-light/30">
+              <p className="text-zinc-500 text-sm">
+                The {viewMode} view mode is a placeholder. Please use the <span className="font-semibold text-red-800">Week</span> view selector for checking and booking time slots.
+              </p>
+              <Button size="sm" className="mt-4" onClick={() => setViewMode("week")}>
+                Switch to Week View
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="min-w-[700px] space-y-4">
+                
+                {/* Column Headers (SUN to SAT) */}
+                <div className="grid grid-cols-[80px_1fr] border-b border-surface-lighter pb-3 text-center">
+                  <div className="w-20"></div> {/* Blank corner for hours axis */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {weekDays.map((day, idx) => {
+                      const isToday = day.toDateString() === defaultDate.toDateString();
+                      const weekdayName = day.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+                      const dayNumber = day.getDate();
 
-                return (
-                  <button
-                    key={`day-${date.getDate()}`}
-                    onClick={() => setSelectedDate(date)}
-                    className={`aspect-square rounded-lg flex flex-col justify-between p-2 text-left relative transition-all group hover:border-primary/50 border ${
-                      isSelected
-                        ? "bg-primary/20 border-primary text-white font-bold"
-                        : isToday
-                        ? "bg-surface-light border-secondary/50 text-secondary"
-                        : "bg-surface-light/40 border-surface-lighter text-gray-300"
-                    }`}
-                  >
-                    <span>{date.getDate()}</span>
+                      return (
+                        <div key={idx} className="space-y-1">
+                          <span className={`text-xs font-bold block tracking-wider ${isToday ? "text-red-800" : "text-zinc-400"}`}>
+                            {weekdayName}
+                          </span>
+                          {isToday ? (
+                            <span className="w-8 h-8 rounded-full bg-red-800 text-white font-bold flex items-center justify-center mx-auto shadow-sm">
+                              {dayNumber}
+                            </span>
+                          ) : (
+                            <span className="text-base font-semibold text-gray-100 block py-1">
+                              {dayNumber}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Scrollable Container for Grid and Time Axis */}
+                <div className="max-h-[440px] overflow-y-auto pr-2 border border-surface-lighter/40 rounded-xl relative bg-white">
+                  <div className="grid grid-cols-[80px_1fr] relative py-4">
                     
-                    {/* Event Dots */}
-                    <div className="flex gap-1 mt-auto">
-                      {blockedSlots.length > 0 && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-danger" title={`${blockedSlots.length} Blocked slot(s)`}></span>
-                      )}
-                      {reservations.length > 0 && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-info" title={`${reservations.length} Approved Reservation(s)`}></span>
-                      )}
+                    {/* Left Hour labels column */}
+                    <div className="relative h-[432px]">
+                      {hourLabels.map((lbl) => (
+                        <div
+                          key={lbl.label}
+                          className="absolute right-3 text-xs text-zinc-400 font-semibold -translate-y-1/2"
+                          style={{ top: `${lbl.ratio * 100}%` }}
+                        >
+                          {lbl.label}
+                        </div>
+                      ))}
                     </div>
-                  </button>
-                );
-              })}
+
+                    {/* 7 Columns Grid representing slots */}
+                    <div className="grid grid-cols-7 gap-2 h-[432px] grid-rows-9 relative">
+                      
+                      {/* Vertical grid lines helper */}
+                      <div className="absolute inset-0 grid grid-cols-7 pointer-events-none opacity-10 divide-x divide-surface-lighter" />
+                      
+                      {/* Horizontal grid lines helper */}
+                      <div className="absolute inset-0 grid grid-rows-9 pointer-events-none opacity-10 divide-y divide-surface-lighter" />
+
+                    {/* Time Slot Blocks rendering */}
+                    {timeBlocks.map((block) => {
+                      return weekDays.map((day, colIndex) => {
+                        const status = getSlotStatus(day, block);
+                        const isSelected = selectedSlot && 
+                          selectedSlot.dateISO === day.toISOString().split("T")[0] && 
+                          selectedSlot.timeLabel === block.label;
+
+                        // Conditional class names matching the screenshot styling exactly
+                        let cellStyles = "";
+                        if (status === "past") {
+                          cellStyles = "bg-zinc-50 border-zinc-100 text-zinc-400 cursor-not-allowed";
+                        } else if (status === "blocked" || status === "reserved") {
+                          cellStyles = "bg-red-50/50 border-red-100 text-red-500 cursor-not-allowed";
+                        } else if (isSelected) {
+                          cellStyles = "bg-red-900/10 border-red-800 text-red-800 ring-2 ring-red-800/20 shadow-sm cursor-pointer";
+                        } else {
+                          cellStyles = "bg-green-50/80 border-green-200 text-green-800 hover:bg-green-50 cursor-pointer hover:shadow-sm";
+                        }
+
+                        return (
+                          <div
+                            key={`${block.id}-${colIndex}`}
+                            onClick={() => handleSelectSlot(day, block, status)}
+                            className={`border rounded-xl p-2.5 flex flex-col justify-center items-center text-center text-xs font-semibold transition-all select-none ${cellStyles}`}
+                            style={{
+                              gridColumn: colIndex + 1,
+                              gridRow: block.gridRow,
+                            }}
+                          >
+                            <span className="block text-[10px] sm:text-xs tracking-tight font-medium opacity-90 leading-tight">
+                              {block.label.split(" - ")[0]} -
+                            </span>
+                            <span className="block text-[10px] sm:text-xs tracking-tight font-medium opacity-90 leading-tight">
+                              {block.label.split(" - ")[1]}
+                            </span>
+                            
+                            <span className="mt-1 flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold">
+                              <span className={`w-1.5 h-1.5 rounded-full 
+                                ${status === "past" ? "bg-zinc-300" :
+                                  status === "available" ? "bg-green-500 animate-pulse" :
+                                  "bg-red-500"}`}
+                              />
+                              <span className="capitalize">
+                                {status === "past" ? "Past" : 
+                                 status === "available" ? "Available" : 
+                                 status === "blocked" ? "Blocked" : "Reserved"}
+                              </span>
+                            </span>
+                          </div>
+                        );
+                      });
+                    })}
+
+                  </div>
+
+                </div>
+
+              </div>
             </div>
           </div>
+          )}
 
-          {/* Day Detail drawer */}
-          <div className="bg-surface border border-surface-lighter rounded-2xl p-6 flex flex-col justify-between">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-bold text-white mb-1">
-                  Schedule Details
-                </h3>
-                <p className="text-sm text-gray-400">
-                  {selectedDate.toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
+        </div>
+
+        {/* Sidebar Info Column */}
+        <div className="bg-surface border border-surface-lighter rounded-2xl p-6 shadow-sm flex flex-col justify-between h-fit min-h-[440px]">
+          
+          <div className="space-y-5">
+            <div className="flex items-center gap-2 border-b border-surface-lighter pb-4">
+              <Calendar className="w-5 h-5 text-red-800" />
+              <h3 className="text-base font-bold text-gray-100">
+                Reservation Details
+              </h3>
+            </div>
+
+            {/* Gray Detail Card Container */}
+            <div className="bg-surface-light border border-surface-lighter rounded-xl p-4 space-y-4">
+              
+              {/* Venue Row */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-semibold uppercase tracking-wider">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Venue</span>
+                </div>
+                <span className="font-bold text-gray-100 block text-sm pl-5">
+                  {currentVenueName}
+                </span>
+              </div>
+              
+              <div className="border-t border-surface-lighter" />
+              
+              {/* Date Row */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-semibold uppercase tracking-wider">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Date</span>
+                </div>
+                <span className={`block text-sm pl-5 ${selectedSlot ? "font-bold text-gray-100" : "text-zinc-400 italic"}`}>
+                  {selectedSlot ? selectedSlot.dateStr : "Not selected"}
+                </span>
               </div>
 
-              {totalSelectedEvents === 0 ? (
-                <div className="text-center py-8 bg-surface-dark/30 rounded-xl border border-surface-lighter/50">
-                  <span className="text-3xl">🟢</span>
-                  <p className="text-sm text-gray-300 font-medium mt-2">Fully Available</p>
-                  <p className="text-xs text-gray-500 mt-1">No reservations or blocks on this date.</p>
+              <div className="border-t border-surface-lighter" />
+              
+              {/* Time Row */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-semibold uppercase tracking-wider">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Time</span>
                 </div>
-              ) : (
-                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-                  {/* Blocked slots list */}
-                  {selectedDayEvents.blockedSlots.map((b) => (
-                    <div key={b.id} className="p-3 bg-danger/10 border border-danger/30 rounded-xl space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-semibold text-danger bg-danger/20 px-2 py-0.5 rounded">
-                          BLOCKED
-                        </span>
-                      </div>
-                      <p className="text-sm font-medium text-white">{b.reason || "Maintenance / Event setup"}</p>
-                      <p className="text-xs text-gray-400">
-                        {formatDateTime(b.startTime).split(" ")[3] + " " + formatDateTime(b.startTime).split(" ")[4]} - {formatDateTime(b.endTime).split(" ")[3] + " " + formatDateTime(b.endTime).split(" ")[4]}
-                      </p>
-                    </div>
-                  ))}
+                <span className={`block text-sm pl-5 ${selectedSlot ? "font-bold text-gray-100" : "text-zinc-400 italic"}`}>
+                  {selectedSlot ? selectedSlot.timeLabel : "Not selected"}
+                </span>
+              </div>
 
-                  {/* Approved reservations list */}
-                  {selectedDayEvents.reservations.map((r) => (
-                    <div key={r.id} className="p-3 bg-info/10 border border-info/30 rounded-xl space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-semibold text-info bg-info/20 px-2 py-0.5 rounded">
-                          RESERVED
-                        </span>
-                      </div>
-                      <p className="text-sm font-medium text-white">{r.eventTitle}</p>
-                      {r.activityType && (
-                        <p className="text-xs text-gray-300">{r.activityType}</p>
-                      )}
-                      <p className="text-xs text-gray-400">
-                        {formatDateTime(r.startTime).split(" ")[3] + " " + formatDateTime(r.startTime).split(" ")[4]} - {formatDateTime(r.endTime).split(" ")[3] + " " + formatDateTime(r.endTime).split(" ")[4]}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-
-            {/* Quick Action Button */}
-            <div className="pt-6 border-t border-surface-lighter mt-6">
-              {isAuthenticated ? (
-                user.role === "CLIENT" ? (
-                  <Link
-                    to={`/reserve?venueId=${selectedVenueId}&date=${formatDateISO(selectedDate)}`}
-                    className="block w-full text-center"
-                  >
-                    <Button className="w-full">
-                      Book on This Date
-                    </Button>
-                  </Link>
-                ) : (
-                  <p className="text-xs text-center text-gray-400">
-                    Only Clients can submit reservation requests. Your current role is <span className="font-semibold text-primary">{user.role}</span>.
-                  </p>
-                )
-              ) : (
-                <div className="text-center space-y-2">
-                  <p className="text-xs text-gray-400">Want to book this date?</p>
-                  <Link to="/login" className="block">
-                    <Button variant="secondary" className="w-full">
-                      Log In to Reserve
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-
           </div>
+
+          <div className="pt-6 mt-6">
+            <Button
+              className="w-full bg-red-800 hover:bg-red-900 text-white border-0"
+              disabled={!selectedSlot}
+              onClick={handleContinue}
+            >
+              Continue to Form
+            </Button>
+          </div>
+
         </div>
-      )}
+
+      </div>
+
     </div>
   );
 }

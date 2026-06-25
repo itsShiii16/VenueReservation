@@ -1,66 +1,45 @@
 /**
- * AuthContext.jsx — Authentication Context Provider
+ * AuthContext.jsx — Client-side Authentication Context Provider
  *
- * Manages auth state (user, token) across the app.
- * Provides login, register, logout functions.
+ * Uses mockDb to check credentials, save current session, and sync user state.
  */
 
 import { createContext, useState, useEffect } from "react";
-import { authService } from "../services/authService";
+import { db, subscribe } from "../services/mockDb";
 
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("vrs_token"));
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(db.getCurrentUser());
+  const [loading, setLoading] = useState(false);
 
-  // On mount, if we have a token, fetch the current user
+  // Sync state with changes to the local store (like updating profile or logout)
   useEffect(() => {
-    const loadUser = async () => {
-      if (token) {
-        try {
-          const res = await authService.getMe();
-          setUser(res.data);
-        } catch {
-          // Token is invalid — clear it
-          localStorage.removeItem("vrs_token");
-          setToken(null);
-          setUser(null);
-        }
-      }
-      setLoading(false);
-    };
-    loadUser();
-  }, [token]);
+    const unsubscribe = subscribe((store) => {
+      setUser(store.currentUser);
+    });
+    return unsubscribe;
+  }, []);
 
   const login = async (email, password) => {
-    const res = await authService.login({ email, password });
-    const { user: userData, token: newToken } = res.data;
-    localStorage.setItem("vrs_token", newToken);
-    setToken(newToken);
-    setUser(userData);
-    return userData;
+    const loggedUser = db.login(email, password);
+    setUser(loggedUser);
+    return loggedUser;
   };
 
   const register = async (formData) => {
-    const res = await authService.register(formData);
-    const { user: userData, token: newToken } = res.data;
-    localStorage.setItem("vrs_token", newToken);
-    setToken(newToken);
-    setUser(userData);
-    return userData;
+    const registeredUser = db.register(formData);
+    setUser(registeredUser);
+    return registeredUser;
   };
 
   const logout = () => {
-    localStorage.removeItem("vrs_token");
-    setToken(null);
+    db.logout();
     setUser(null);
   };
 
   const value = {
     user,
-    token,
     loading,
     login,
     register,

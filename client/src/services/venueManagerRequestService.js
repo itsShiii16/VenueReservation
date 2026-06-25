@@ -1,10 +1,24 @@
 /**
- * venueManagerRequestService.js — VM Request API calls
+ * venueManagerRequestService.js — Replaces API calls with local DB operations
  */
 
-import api from "./api";
+import { db } from "./mockDb";
 
 export const venueManagerRequestService = {
-  submit: (data) => api.post("/venue-manager-requests", data),
-  getMy: () => api.get("/venue-manager-requests/my"),
+  submit: async (data) => {
+    return {
+      success: true,
+      data: db.submitVMRequest(data),
+    };
+  },
+
+  getMy: async () => {
+    const user = db.getCurrentUser();
+    if (!user) throw new Error("Unauthorized");
+    const requests = db.getVMRequests().filter((r) => r.clientId === user.id);
+    return {
+      success: true,
+      data: requests,
+    };
+  },
 };

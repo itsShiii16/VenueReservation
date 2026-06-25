@@ -1,12 +1,10 @@
-# UPD Venue Reservation System (VRS)
+# UP Diliman Venue Reservation System (VRS)
 
-A full-stack venue reservation system for **UP Diliman** built with the PERN stack.
+A client-side, serverless mobile-responsive web application for **UP Diliman** venue reservations. This application runs entirely in the browser, utilizing a reactive mock database saved to `localStorage` for complete state persistence across reloads.
 
-- **Frontend**: React + Vite + Tailwind CSS v4
-- **Backend**: Node.js + Express.js (MVC architecture)
-- **Database**: PostgreSQL
-- **ORM**: Prisma
-- **Auth**: JWT-based authentication
+- **Frontend Tech Stack**: React + Vite + Tailwind CSS v4 + React Router v7
+- **UI/UX Elements**: Lucide React (Icons) + Sonner (Toast notifications)
+- **Local Persistence**: `mockDb.js` matching standard relational models
 
 ---
 
@@ -16,227 +14,74 @@ A full-stack venue reservation system for **UP Diliman** built with the PERN sta
 VenueReservation/
 ├── client/                  # React frontend
 │   └── src/
-│       ├── components/      # 15 reusable UI components
-│       ├── context/         # AuthContext provider
-│       ├── data/            # Mock data for development
+│       ├── components/      # 15 reusable UI components (Buttons, Modals, StatusBadges)
+│       ├── context/         # AuthContext provider (subscribed to mockDb changes)
+│       ├── data/            # Mock dataset (mockVenues.js, mockReservations.js)
 │       ├── hooks/           # useAuth, useApi
-│       ├── layouts/         # MainLayout, VMLayout, AdminLayout
-│       ├── pages/           # 24 pages (public, client, vm, admin)
-│       ├── routes/          # AppRoutes, ProtectedRoute
-│       ├── services/        # 7 API service modules
+│       ├── layouts/         # Layout grids (MainLayout, VMLayout, AdminLayout)
+│       ├── pages/           # 25 pages (Pencil booking, document verification, payment dashboards)
+│       ├── routes/          # AppRoutes, ProtectedRoute (RBAC Guard)
+│       ├── services/        # Relational database CRUD wrappers & mockDb.js
 │       └── utils/           # formatDate, roleHelpers
 │
-├── server/                  # Express backend
-│   ├── prisma/
-│   │   ├── schema.prisma    # 8 models, 3 enums
-│   │   └── seed.js          # Sample data seeder
-│   └── src/
-│       ├── config/          # DB client, constants
-│       ├── controllers/     # 7 controllers
-│       ├── middleware/       # auth, roles, validation, errors
-│       ├── routes/          # 7 route files
-│       ├── services/        # audit, conflict services
-│       ├── utils/           # token, ref number, conflict check
-│       └── validators/      # 5 validator files
-│
-└── README.md
+└── README.md                # Configuration & documentation
 ```
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
+Since this is a client-side only app, **no backend, PostgreSQL, or Prisma setup is required.**
 
-- [Node.js](https://nodejs.org/) v18+
-- [PostgreSQL](https://www.postgresql.org/) v14+
-- npm (comes with Node.js)
-
----
-
-### 1. Clone the Repository
+### 1. Install Frontend Dependencies
 
 ```bash
-git clone <your-repo-url>
-cd VenueReservation
-```
-
-### 2. Set Up PostgreSQL
-
-Create a database for the project:
-
-```sql
-CREATE DATABASE vrs_db;
-```
-
-### 3. Configure the Backend
-
-```bash
-cd server
-
-# Copy the environment template
-cp .env.example .env
-
-# Edit .env with your database credentials:
-# DATABASE_URL="postgresql://postgres:yourpassword@localhost:5432/vrs_db?schema=public"
-# JWT_SECRET="your-random-secret-key"
-```
-
-### 4. Install Backend Dependencies
-
-```bash
-# Still in the server/ directory
-npm install
-```
-
-### 5. Run Prisma Migrations
-
-```bash
-# Generate the Prisma client
-npx prisma generate
-
-# Create the database tables
-npx prisma migrate dev --name init
-```
-
-### 6. Seed the Database
-
-```bash
-npx prisma db seed
-```
-
-This creates:
-- 1 System Admin (`admin@upd.edu.ph`)
-- 2 Clients (`juan@upd.edu.ph`, `ana@upd.edu.ph`)
-- 2 Venue Managers (`carlos@upd.edu.ph`, `sofia@upd.edu.ph`)
-- 4 UPD venues (Cine Adarna, Palma Hall 400, CS Amphitheater, Melchor Hall Conference Room)
-- 3 sample reservations (Approved, Submitted, Declined)
-- 2 blocked slots
-- 2 venue manager requests
-
-**All seed accounts use password:** `password123`
-
-### 7. Start the Backend
-
-```bash
-npm run dev
-```
-
-The API server starts at `http://localhost:5000`.
-
-### 8. Install Frontend Dependencies
-
-```bash
-# Open a new terminal
+# Navigate to the client directory
 cd client
+
+# Install the packages (React Router, Lucide, Sonner)
 npm install
 ```
 
-### 9. Start the Frontend
+### 2. Start the Development Server
 
 ```bash
 npm run dev
 ```
 
-The frontend starts at `http://localhost:5173`.
+The application will start running on **[http://localhost:5173](http://localhost:5173)**.
 
 ---
 
-## 🔐 User Roles
+## 🔐 Seed Accounts & Roles
 
-| Role | Capabilities |
-|------|-------------|
-| **Guest** | Browse venues (no account needed) |
-| **Client** | Submit reservations, track status, request VM access |
-| **Venue Manager** | Manage assigned venues, approve/decline reservations, block schedules |
-| **System Admin** | Review and approve/reject Venue Manager access requests |
+All mock database accounts use the password **`password123`**:
 
----
-
-## 📡 API Endpoints
-
-### Auth
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | No | Create account |
-| POST | `/api/auth/login` | No | Login |
-| GET | `/api/auth/me` | Yes | Get current user |
-
-### Venues
-| Method | Endpoint | Auth | Role | Description |
-|--------|----------|------|------|-------------|
-| GET | `/api/venues` | No | — | List venues |
-| GET | `/api/venues/:id` | No | — | Venue details |
-| POST | `/api/venues` | Yes | VM | Create venue |
-| PUT | `/api/venues/:id` | Yes | VM | Update venue |
-| DELETE | `/api/venues/:id` | Yes | VM | Deactivate venue |
-
-### Reservations
-| Method | Endpoint | Auth | Role | Description |
-|--------|----------|------|------|-------------|
-| POST | `/api/reservations` | Yes | Client | Create reservation |
-| GET | `/api/reservations/my` | Yes | — | My reservations |
-| GET | `/api/reservations/:id` | Yes | — | Reservation details |
-| PATCH | `/api/reservations/:id/cancel` | Yes | Client | Cancel reservation |
-| GET | `/api/reservations/venue-manager` | Yes | VM | VM's venue reservations |
-| PATCH | `/api/reservations/:id/approve` | Yes | VM | Approve reservation |
-| PATCH | `/api/reservations/:id/decline` | Yes | VM | Decline reservation |
-
-### Blocked Slots
-| Method | Endpoint | Auth | Role | Description |
-|--------|----------|------|------|-------------|
-| GET | `/api/blocked-slots/:venueId` | No | — | Get blocked slots |
-| POST | `/api/blocked-slots` | Yes | VM | Create blocked slot |
-| DELETE | `/api/blocked-slots/:id` | Yes | VM | Remove blocked slot |
-
-### Venue Manager Requests
-| Method | Endpoint | Auth | Role | Description |
-|--------|----------|------|------|-------------|
-| POST | `/api/venue-manager-requests` | Yes | Client | Submit VM request |
-| GET | `/api/venue-manager-requests/my` | Yes | — | My VM requests |
-
-### Admin
-| Method | Endpoint | Auth | Role | Description |
-|--------|----------|------|------|-------------|
-| GET | `/api/admin/venue-manager-requests` | Yes | Admin | List all VM requests |
-| PATCH | `/api/admin/venue-manager-requests/:id/approve` | Yes | Admin | Approve VM request |
-| PATCH | `/api/admin/venue-manager-requests/:id/reject` | Yes | Admin | Reject VM request |
+| Role | Email | Password | Capabilites |
+| :--- | :--- | :--- | :--- |
+| **System Admin** | `admin@upd.edu.ph` | `password123` | Approves or Rejects Venue Manager access upgrade requests. |
+| **Venue Manager** | `carlos@upd.edu.ph`<br>`sofia@upd.edu.ph` | `password123` | Adds/edits venues, validates client documents, tracks payments, blocks schedules, and inputs assisted bookings. |
+| **Client** | `juan@upd.edu.ph`<br>`ana@upd.edu.ph` | `password123` | Browses venues, views calendars, requests reservations, uploads documents, and tracks checklist completions. |
 
 ---
 
-## ⚠️ Schedule Conflict Logic
+## 💡 Key App Workflows
 
-When creating a reservation, the system checks for conflicts with:
+### 1. Pencil Booking (Draft Status)
+- Venues can configure whether they allow **Pencil Bookings** (Draft status) or require immediate full submission.
+- Clients can choose "Pencil Book" to hold a slot temporarily (valid for 3 days) while they compile required documents.
 
-1. **Approved reservations** for the same venue
-2. **Blocked slots** for the same venue
+### 2. Requirement Checklist Tracking
+- Every reservation tracks an array of document requirements (e.g. *Letter of Request*, *Event Proposal*, *Adviser Endorsement*).
+- Status changes dynamically: `Missing` ➔ `Uploaded` ➔ `Approved` OR `Needs Revision` (with manager remarks).
+- Clients can upload document files in their reservation details drawer, automatically updating status from `Draft` to `Submitted`.
 
-Overlap detection uses: `newStart < existingEnd AND newEnd > existingStart`
+### 3. Document Validation (Venue Managers)
+- Managers can review uploaded files on a reservation details page, and approve individual documents or send them back ("Return for Completion") with feedback remarks.
 
-If a conflict is found, the request is rejected with: *"This schedule is unavailable."*
+### 4. Verification & Payment Flow
+- Once all requirements are validated, managers trigger the payment flow by clicking **Request Payment** (status changes to *Payment Pending*).
+- Managers can manually click **Mark as Paid & Approve Booking** (moves status to `APPROVED` and locks the calendar) or **Mark Payment Overdue**.
 
----
-
-## 🛠 Tech Stack Details
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Frontend | React 19 + Vite | UI framework + build tool |
-| Styling | Tailwind CSS v4 | Utility-first CSS |
-| Routing | React Router v7 | Client-side routing |
-| HTTP | Axios | API requests |
-| Backend | Express.js | REST API server |
-| ORM | Prisma | Database access |
-| Database | PostgreSQL | Relational data store |
-| Auth | JWT + bcrypt | Token-based authentication |
-| Validation | express-validator | Request validation |
-
----
-
-## 📝 Development Notes
-
-- The frontend includes **mock data fallbacks** — it works even without the backend running.
-- Service files in `client/src/services/` point to `http://localhost:5000/api` — update `VITE_API_URL` in a `.env` file if your backend is on a different URL.
-- All passwords in seed data are: `password123`
-- The project uses **soft deletes** for venues (sets `isActive = false` instead of actual deletion).
-- Audit logs track important actions (venue creation, reservation approval, etc.).
+### 5. Assisted Bookings
+- Venue Managers can use the **Create Assisted Booking** modal on their dashboard to quickly book a venue on behalf of a client without filling client-side requests.

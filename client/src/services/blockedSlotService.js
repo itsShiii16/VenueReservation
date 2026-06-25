@@ -1,11 +1,29 @@
 /**
- * blockedSlotService.js — Blocked Slot API calls
+ * blockedSlotService.js — Replaces API calls with local DB operations
  */
 
-import api from "./api";
+import { db } from "./mockDb";
 
 export const blockedSlotService = {
-  getByVenue: (venueId) => api.get(`/blocked-slots/${venueId}`),
-  create: (data) => api.post("/blocked-slots", data),
-  delete: (id) => api.delete(`/blocked-slots/${id}`),
+  getByVenue: async (venueId) => {
+    const slots = db.getBlockedSlots().filter((b) => b.venueId === venueId);
+    return {
+      success: true,
+      data: slots,
+    };
+  },
+
+  create: async (data) => {
+    return {
+      success: true,
+      data: db.createBlockedSlot(data),
+    };
+  },
+
+  delete: async (id) => {
+    db.deleteBlockedSlot(id);
+    return {
+      success: true,
+    };
+  },
 };

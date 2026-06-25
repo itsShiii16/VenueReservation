@@ -1,11 +1,32 @@
 /**
- * authService.js — Authentication API calls
+ * authService.js — Replaces API calls with local DB operations
  */
 
-import api from "./api";
+import { db } from "./mockDb";
 
 export const authService = {
-  register: (data) => api.post("/auth/register", data),
-  login: (data) => api.post("/auth/login", data),
-  getMe: () => api.get("/auth/me"),
+  register: async (data) => {
+    const user = db.register(data);
+    return {
+      success: true,
+      data: { user, token: "mock-jwt-token" },
+    };
+  },
+  
+  login: async (data) => {
+    const user = db.login(data.email, data.password);
+    return {
+      success: true,
+      data: { user, token: "mock-jwt-token" },
+    };
+  },
+
+  getMe: async () => {
+    const user = db.getCurrentUser();
+    if (!user) throw new Error("Unauthorized");
+    return {
+      success: true,
+      data: user,
+    };
+  },
 };

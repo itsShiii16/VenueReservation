@@ -31,6 +31,7 @@ import ReservationFormPage from "../pages/client/ReservationFormPage";
 import MyReservationsPage from "../pages/client/MyReservationsPage";
 import ProfilePage from "../pages/client/ProfilePage";
 import RequestVMAccessPage from "../pages/client/RequestVMAccessPage";
+import ClientReservationDetailsPage from "../pages/client/ClientReservationDetailsPage";
 
 // Venue Manager pages
 import VMDashboardPage from "../pages/venue-manager/VMDashboardPage";
@@ -75,6 +76,14 @@ export default function AppRoutes() {
           element={
             <ProtectedRoute>
               <MyReservationsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reservations/:id"
+          element={
+            <ProtectedRoute>
+              <ClientReservationDetailsPage />
             </ProtectedRoute>
           }
         />
