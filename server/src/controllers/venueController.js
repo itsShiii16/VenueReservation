@@ -245,7 +245,7 @@ const deleteVenue = async (req, res, next) => {
       });
     }
 
-    if (existingVenue.createdById !== req.user.id) {
+    if (req.user.role !== "SYSTEM_ADMIN" && existingVenue.createdById !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: "You can only delete venues that you manage.",

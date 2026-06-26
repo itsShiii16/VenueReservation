@@ -28,18 +28,8 @@ export default function Navbar() {
             <span className="text-lg font-bold text-gray-100">Venue Reservation</span>
           </Link>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-10">
-            <NavLink to="/" className={navClass} end>
-              Home
-            </NavLink>
-            <NavLink to="/venues" className={navClass}>
-              Venues
-            </NavLink>
-            <NavLink to="/my-reservations" className={navClass}>
-              My Reservations
-            </NavLink>
-          </div>
+          {/* Navigation Links Removed */}
+          <div className="hidden md:flex items-center gap-10"></div>
 
           <div className="flex items-center gap-5">
             {isAuthenticated ? (

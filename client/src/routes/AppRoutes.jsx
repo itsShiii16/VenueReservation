@@ -8,7 +8,9 @@
  * - System Admin routes (SYSTEM_ADMIN role)
  */
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { getDefaultPath } from "../utils/roleHelpers";
 import ProtectedRoute from "./ProtectedRoute";
 
 // Layouts
@@ -45,12 +47,20 @@ import VenueCalendarPage from "../pages/venue-manager/VenueCalendarPage";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
 import ApprovedManagersPage from "../pages/admin/ApprovedManagersPage";
 
+const RootRedirect = () => {
+  const { isAuthenticated, user } = useAuth();
+  if (isAuthenticated && user) {
+    return <Navigate to={getDefaultPath(user.role)} replace />;
+  }
+  return <Navigate to="/login" replace />;
+};
+
 export default function AppRoutes() {
   return (
     <Routes>
       {/* ─── Public Routes (MainLayout) ─── */}
       <Route element={<MainLayout />}>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/venues" element={<VenueDirectoryPage />} />

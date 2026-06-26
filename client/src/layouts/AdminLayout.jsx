@@ -6,23 +6,20 @@
 
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
+import { LayoutDashboard, Users } from "lucide-react";
 
 const adminNavItems = [
-  { path: "/admin/dashboard", label: "Dashboard", end: true },
-  { path: "/admin/approved-managers", label: "Venue Managers" },
+  { path: "/admin/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-[18px] w-[18px]" />, end: true },
+  { path: "/admin/approved-managers", label: "Venue Managers", icon: <Users className="h-[18px] w-[18px]" /> },
 ];
 
 export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-gray-950">
-      <Navbar />
-      <div className="flex">
-        <Sidebar title="System Admin" navItems={adminNavItems} />
-        <main className="flex-1 p-8">
-          <Outlet />
-        </main>
-      </div>
+      <Sidebar title="System Admin" navItems={adminNavItems} />
+      <main className="ml-60 min-h-screen p-8">
+        <Outlet />
+      </main>
     </div>
   );
 }

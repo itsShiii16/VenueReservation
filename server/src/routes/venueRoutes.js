@@ -59,7 +59,7 @@ router.put(
 router.delete(
   "/:id",
   authenticate,
-  authorizeRoles("VENUE_MANAGER"),
+  authorizeRoles("VENUE_MANAGER", "SYSTEM_ADMIN"),
   deleteVenue
 );
 
