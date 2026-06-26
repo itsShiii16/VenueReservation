@@ -16,4 +16,6 @@ export const venueService = {
   update: async (id, data) => api.put(`/venues/${id}`, data),
 
   delete: async (id) => api.delete(`/venues/${id}`),
+
+  batchConfigureDates: async (id, data) => api.post(`/venues/${id}/date-configs/batch`, data),
 };

@@ -47,6 +47,7 @@ const getVenueById = async (req, res, next) => {
           select: { id: true, firstName: true, lastName: true },
         },
         requirements: true,
+        dateConfigs: true,
       },
     });
 
@@ -95,6 +96,7 @@ const getVenueAvailability = async (req, res, next) => {
           },
           orderBy: { startTime: "asc" },
         },
+        dateConfigs: true,
       },
     });
 
@@ -130,6 +132,10 @@ const createVenue = async (req, res, next) => {
       equipment,
       rules,
       imageUrl,
+      defaultRate,
+      defaultRateType,
+      defaultOpenTime,
+      defaultCloseTime,
     } = req.body;
 
     const venue = await prisma.venue.create({
@@ -143,6 +149,10 @@ const createVenue = async (req, res, next) => {
         equipment: equipment || [],
         rules,
         imageUrl,
+        defaultRate: defaultRate !== undefined ? parseFloat(defaultRate) : 0.0,
+        defaultRateType: defaultRateType || "HOURLY",
+        defaultOpenTime: defaultOpenTime || "08:00",
+        defaultCloseTime: defaultCloseTime || "17:00",
         createdById: req.user.id,
       },
     });
@@ -265,6 +275,105 @@ const deleteVenue = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/venues/:id/date-configs/batch
+ * Configure custom rates & schedules for multiple dates (VENUE_MANAGER only)
+ */
+const batchConfigureDates = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { dates, rate, rateType, openTime, closeTime, isClosed, clearOverrides } = req.body;
+
+    // 1. Verify venue exists and belongs to this manager
+    const existingVenue = await prisma.venue.findUnique({
+      where: { id },
+    });
+
+    if (!existingVenue) {
+      return res.status(404).json({
+        success: false,
+        message: "Venue not found.",
+      });
+    }
+
+    if (existingVenue.createdById !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only configure venues that you manage.",
+      });
+    }
+
+    if (!Array.isArray(dates) || dates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide an array of dates to configure.",
+      });
+    }
+
+    // 2. Perform database operations in transaction
+    const operations = dates.map((dateStr) => {
+      // Parse date to start of day in UTC
+      const date = new Date(dateStr);
+      date.setUTCHours(0, 0, 0, 0);
+
+      if (clearOverrides) {
+        return prisma.venueDateConfig.deleteMany({
+          where: {
+            venueId: id,
+            date: date,
+          },
+        });
+      } else {
+        const updateData = {};
+        if (rate !== undefined) updateData.rate = rate === null ? null : parseFloat(rate);
+        if (rateType !== undefined) updateData.rateType = rateType;
+        if (openTime !== undefined) updateData.openTime = openTime;
+        if (closeTime !== undefined) updateData.closeTime = closeTime;
+        if (isClosed !== undefined) updateData.isClosed = !!isClosed;
+
+        const createData = {
+          venueId: id,
+          date: date,
+          rate: rate === null ? null : (rate !== undefined ? parseFloat(rate) : null),
+          rateType: rateType || null,
+          openTime: openTime || null,
+          closeTime: closeTime || null,
+          isClosed: !!isClosed,
+        };
+
+        return prisma.venueDateConfig.upsert({
+          where: {
+            venueId_date: {
+              venueId: id,
+              date: date,
+            },
+          },
+          update: updateData,
+          create: createData,
+        });
+      }
+    });
+
+    await prisma.$transaction(operations);
+
+    // 3. Log the action
+    await logAudit({
+      userId: req.user.id,
+      action: "BATCH_CONFIGURE_VENUE_DATES",
+      entityType: "Venue",
+      entityId: id,
+      description: `Batch configured ${dates.length} dates for venue: ${existingVenue.name}`,
+    });
+
+    res.json({
+      success: true,
+      message: `Successfully configured ${dates.length} dates.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllVenues,
   getVenueById,
@@ -272,4 +381,5 @@ module.exports = {
   createVenue,
   updateVenue,
   deleteVenue,
+  batchConfigureDates,
 };

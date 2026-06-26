@@ -93,8 +93,26 @@ export default function VenueDetailsPage() {
   }
 
   const display = venueDisplay[venue.id] || {};
-  const venueName = display.name || venue.name;
-  const location = display.location || venue.location;
+  const venueName = venue.name || display.name;
+  const location = venue.location || display.location;
+
+  const formatTimeString = (timeStr) => {
+    if (!timeStr) return "08:00 AM";
+    const [hours, minutes] = timeStr.split(":");
+    const hr = parseInt(hours);
+    const suffix = hr >= 12 ? "PM" : "AM";
+    const formattedHr = hr % 12 || 12;
+    const padHr = String(formattedHr).padStart(2, "0");
+    return `${padHr}:${minutes} ${suffix}`;
+  };
+
+  const formattedHours = venue.defaultOpenTime && venue.defaultCloseTime
+    ? `${formatTimeString(venue.defaultOpenTime)} - ${formatTimeString(venue.defaultCloseTime)}`
+    : (display.time || "08:00 AM - 05:00 PM");
+
+  const formattedRate = venue.defaultRate !== undefined
+    ? `₱${venue.defaultRate.toLocaleString()} / ${venue.defaultRateType === "HOURLY" ? "hour" : "flat"}`
+    : (display.rate || "Rate to be confirmed");
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 pb-12 lg:grid-cols-[1fr_400px]">
@@ -128,15 +146,15 @@ export default function VenueDetailsPage() {
           <div className="space-y-8">
             <p className="text-xl leading-relaxed text-gray-400">
               The {venueName} is a versatile space located at {location}. Managed by the{" "}
-              {display.manager || venue.managingUnit || "assigned UP Diliman unit"}, it is ideal
-              for campus events with up to {display.capacity || venue.capacity} attendees. Please
+              {venue.managingUnit || display.manager || "assigned UP Diliman unit"}, it is ideal
+              for campus events with up to {venue.capacity || display.capacity} attendees. Please
               review the specific requirements and rules before submitting a reservation request.
             </p>
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <InfoCard icon={UsersRound} label="Max Capacity" value={`${display.capacity || venue.capacity} people`} />
-              <InfoCard icon={Clock3} label="Available Time" value={display.time || "08:00 AM - 05:00 PM"} />
-              <InfoCard icon={CreditCard} label="Venue Rate" value={display.rate || "Rate to be confirmed"} />
+              <InfoCard icon={UsersRound} label="Max Capacity" value={`${venue.capacity || display.capacity} people`} />
+              <InfoCard icon={Clock3} label="Available Time" value={formattedHours} />
+              <InfoCard icon={CreditCard} label="Venue Rate" value={formattedRate} />
               {isAuthenticated && (
                 <InfoCard icon={CheckCircle2} label="Status" value="Available to Book" positive />
               )}

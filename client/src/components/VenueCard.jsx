@@ -44,7 +44,7 @@ const venueDisplay = {
   },
 };
 
-export default function VenueCard({ venue }) {
+export default function VenueCard({ venue, editUrl }) {
   const display = venueDisplay[venue.id] || {};
 
   return (
@@ -86,12 +86,29 @@ export default function VenueCard({ venue }) {
           ))}
         </div>
 
-        <Link
-          to={`/venues/${venue.id}`}
-          className="flex min-h-12 items-center justify-center rounded-lg bg-primary px-4 text-base font-bold text-white transition hover:bg-primary-dark"
-        >
-          View Details
-        </Link>
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <Link
+            to={`/venues/${venue.id}`}
+            className="flex min-h-12 items-center justify-center rounded-lg border border-zinc-200 text-sm font-bold text-gray-100 transition hover:bg-zinc-50"
+          >
+            View Details
+          </Link>
+          {editUrl ? (
+            <Link
+              to={editUrl}
+              className="flex min-h-12 items-center justify-center rounded-lg bg-primary px-4 text-sm font-bold text-white transition hover:bg-primary-dark"
+            >
+              Edit Venue
+            </Link>
+          ) : (
+            <Link
+              to={`/calendar?venueId=${venue.id}`}
+              className="flex min-h-12 items-center justify-center rounded-lg bg-primary px-4 text-sm font-bold text-white transition hover:bg-primary-dark"
+            >
+              Book Now
+            </Link>
+          )}
+        </div>
       </div>
     </article>
   );

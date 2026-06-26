@@ -116,7 +116,11 @@ export default function ManageVenuesPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {venues.map((venue) => (
-            <VenueCard key={venue.id} venue={venue} />
+            <VenueCard
+              key={venue.id}
+              venue={venue}
+              editUrl={`/vm/venues/${venue.id}/edit`}
+            />
           ))}
         </div>
       )}

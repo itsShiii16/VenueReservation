@@ -134,6 +134,10 @@ async function main() {
       paymentDeadlineDays: 5,
       imageUrl: null,
       isActive: true,
+      defaultRate: 5000,
+      defaultRateType: "FLAT",
+      defaultOpenTime: "08:00",
+      defaultCloseTime: "22:00",
       createdById: manager1.id,
     },
   });
@@ -156,6 +160,10 @@ async function main() {
       paymentDeadlineDays: 5,
       imageUrl: null,
       isActive: true,
+      defaultRate: 2000,
+      defaultRateType: "FLAT",
+      defaultOpenTime: "08:00",
+      defaultCloseTime: "17:00",
       createdById: manager1.id,
     },
   });
@@ -178,6 +186,10 @@ async function main() {
       paymentDeadlineDays: 5,
       imageUrl: null,
       isActive: true,
+      defaultRate: 1500,
+      defaultRateType: "FLAT",
+      defaultOpenTime: "08:00",
+      defaultCloseTime: "20:00",
       createdById: manager2.id,
     },
   });
@@ -200,10 +212,14 @@ async function main() {
       paymentDeadlineDays: 5,
       imageUrl: null,
       isActive: true,
+      defaultRate: 1000,
+      defaultRateType: "FLAT",
+      defaultOpenTime: "08:00",
+      defaultCloseTime: "17:00",
       createdById: manager2.id,
     },
   });
-  console.log("  ✓ Created 4 UPD Venues");
+  console.log("  ✓ Created 4 UPD Venues with Rates & Schedules");
 
   // ───────────── Create Reservations ─────────────
 

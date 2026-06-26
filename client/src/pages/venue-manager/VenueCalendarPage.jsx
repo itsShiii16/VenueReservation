@@ -5,10 +5,13 @@ import EmptyState from "../../components/EmptyState";
 import LoadingState from "../../components/LoadingState";
 import Button from "../../components/Button";
 import Select from "../../components/Select";
+import Input from "../../components/Input";
+import Modal from "../../components/Modal";
 import { venueService } from "../../services/venueService";
 import { blockedSlotService } from "../../services/blockedSlotService";
 import { useAuth } from "../../hooks/useAuth";
 import { formatDateTime } from "../../utils/formatDate";
+import { toast } from "sonner";
 
 export default function VenueCalendarPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -20,6 +23,21 @@ export default function VenueCalendarPage() {
   const [loadingVenues, setLoadingVenues] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Batch Configuration State
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [selectedDates, setSelectedDates] = useState(new Set());
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [batchFormData, setBatchFormData] = useState({
+    applyRateOverride: false,
+    rate: "0",
+    rateType: "HOURLY",
+    applyScheduleOverride: false,
+    openTime: "08:00",
+    closeTime: "17:00",
+    isClosed: false,
+    clearOverrides: false,
+  });
 
   // Calendar navigation state
   const today = new Date();
@@ -64,6 +82,8 @@ export default function VenueCalendarPage() {
     const paramId = searchParams.get("venueId");
     if (paramId && paramId !== selectedVenueId) {
       setSelectedVenueId(paramId);
+      setIsBatchMode(false);
+      setSelectedDates(new Set());
     }
   }, [searchParams]);
 
@@ -93,6 +113,8 @@ export default function VenueCalendarPage() {
   const handleVenueChange = (e) => {
     const id = e.target.value;
     setSelectedVenueId(id);
+    setIsBatchMode(false);
+    setSelectedDates(new Set());
     if (id) {
       setSearchParams({ venueId: id });
     } else {
@@ -107,10 +129,10 @@ export default function VenueCalendarPage() {
     setActionLoading(true);
     try {
       await blockedSlotService.delete(slotId);
-      // Refresh details
       await fetchVenueDetails();
+      toast.success("Schedule slot unblocked successfully.");
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete blocked slot.");
+      toast.error(err.response?.data?.message || "Failed to delete blocked slot.");
     } finally {
       setActionLoading(false);
     }
@@ -177,8 +199,175 @@ export default function VenueCalendarPage() {
     return localDate.toISOString().split("T")[0];
   };
 
+  // Helpers to resolve custom rates & schedule overrides per date
+  const getDateConfig = (date) => {
+    if (!date || !venueDetails || !venueDetails.dateConfigs) return null;
+    const dateStr = formatDateISO(date);
+    return venueDetails.dateConfigs.find((c) => {
+      const cDate = new Date(c.date);
+      const cStr = cDate.toISOString().split("T")[0];
+      return cStr === dateStr;
+    });
+  };
+
+  const getEffectiveDetails = (date) => {
+    const config = getDateConfig(date);
+    const defaults = venues.find((v) => v.id === selectedVenueId) || {};
+    
+    return {
+      rate: config && config.rate !== null ? config.rate : (defaults.defaultRate ?? 0),
+      rateType: config && config.rateType ? config.rateType : (defaults.defaultRateType || "HOURLY"),
+      openTime: config && config.openTime ? config.openTime : (defaults.defaultOpenTime || "08:00"),
+      closeTime: config && config.closeTime ? config.closeTime : (defaults.defaultCloseTime || "17:00"),
+      isClosed: config ? config.isClosed : false,
+      hasOverride: !!config
+    };
+  };
+
+  const handleDateClick = (date) => {
+    if (isBatchMode) {
+      const dateStr = formatDateISO(date);
+      setSelectedDates((prev) => {
+        const next = new Set(prev);
+        if (next.has(dateStr)) {
+          next.delete(dateStr);
+        } else {
+          next.add(dateStr);
+        }
+        return next;
+      });
+    } else {
+      setSelectedDate(date);
+    }
+  };
+
+  const toggleBatchMode = () => {
+    setIsBatchMode(!isBatchMode);
+    setSelectedDates(new Set());
+  };
+
+  const handleSelectWeekdays = () => {
+    const next = new Set(selectedDates);
+    daysArray.forEach((date) => {
+      if (date) {
+        const day = date.getDay();
+        if (day !== 0 && day !== 6) { // Monday-Friday
+          next.add(formatDateISO(date));
+        }
+      }
+    });
+    setSelectedDates(next);
+  };
+
+  const handleSelectWeekends = () => {
+    const next = new Set(selectedDates);
+    daysArray.forEach((date) => {
+      if (date) {
+        const day = date.getDay();
+        if (day === 0 || day === 6) { // Sunday, Saturday
+          next.add(formatDateISO(date));
+        }
+      }
+    });
+    setSelectedDates(next);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedDates(new Set());
+  };
+
+  const handleBatchFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setBatchFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
+  };
+
+  const openConfigModal = () => {
+    if (selectedDates.size === 0) {
+      toast.error("Please select at least one date.");
+      return;
+    }
+    // Seed modal form from default venue settings
+    const defaults = venues.find((v) => v.id === selectedVenueId) || {};
+    setBatchFormData({
+      applyRateOverride: false,
+      rate: String(defaults.defaultRate ?? 0),
+      rateType: defaults.defaultRateType || "HOURLY",
+      applyScheduleOverride: false,
+      openTime: defaults.defaultOpenTime || "08:00",
+      closeTime: defaults.defaultCloseTime || "17:00",
+      isClosed: false,
+      clearOverrides: false,
+    });
+    setIsConfigModalOpen(true);
+  };
+
+  const openConfigForSingleDate = (date) => {
+    const eff = getEffectiveDetails(date);
+    setBatchFormData({
+      applyRateOverride: eff.hasOverride && getDateConfig(date)?.rate !== null,
+      rate: String(eff.rate),
+      rateType: eff.rateType,
+      applyScheduleOverride: eff.hasOverride && getDateConfig(date)?.openTime !== null,
+      openTime: eff.openTime,
+      closeTime: eff.closeTime,
+      isClosed: eff.isClosed,
+      clearOverrides: false,
+    });
+    const singleSet = new Set();
+    singleSet.add(formatDateISO(date));
+    setSelectedDates(singleSet);
+    setIsConfigModalOpen(true);
+  };
+
+  const handleBatchSave = async (e) => {
+    e.preventDefault();
+    if (selectedDates.size === 0) return;
+    
+    const payload = {
+      dates: Array.from(selectedDates),
+      clearOverrides: batchFormData.clearOverrides,
+    };
+    
+    if (!batchFormData.clearOverrides) {
+      payload.isClosed = batchFormData.isClosed;
+      if (batchFormData.applyRateOverride) {
+        payload.rate = parseFloat(batchFormData.rate);
+        payload.rateType = batchFormData.rateType;
+      } else {
+        payload.rate = null; // Don't override
+      }
+      if (batchFormData.applyScheduleOverride) {
+        payload.openTime = batchFormData.openTime;
+        payload.closeTime = batchFormData.closeTime;
+      } else {
+        payload.openTime = null; // Don't override
+        payload.closeTime = null;
+      }
+    }
+    
+    setActionLoading(true);
+    try {
+      const res = await venueService.batchConfigureDates(selectedVenueId, payload);
+      if (res.success) {
+        toast.success(res.message || `Successfully configured ${selectedDates.size} date(s)!`);
+        setIsConfigModalOpen(false);
+        setIsBatchMode(false);
+        setSelectedDates(new Set());
+        await fetchVenueDetails();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to configure dates.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const selectedDayEvents = getDayEvents(selectedDate);
   const totalSelectedEvents = selectedDayEvents.reservations.length + selectedDayEvents.blockedSlots.length;
+  const currentDayEff = selectedVenueId ? getEffectiveDetails(selectedDate) : null;
 
   if (loadingVenues) return <LoadingState message="Loading your venue calendars..." />;
 
@@ -186,13 +375,23 @@ export default function VenueCalendarPage() {
     <div className="space-y-8">
       <PageHeader
         title="Venue Calendar"
-        subtitle="Manage and view schedules, bookings, and blocked dates for your venues"
+        subtitle="Manage schedules, default settings, and overrides for your managed venues"
       >
-        {selectedVenueId && (
-          <Link to={`/vm/block-schedule?venueId=${selectedVenueId}&date=${formatDateISO(selectedDate)}`}>
-            <Button variant="danger">Block Time Slots</Button>
-          </Link>
-        )}
+        <div className="flex flex-wrap gap-3">
+          {selectedVenueId && (
+            <>
+              <Button
+                variant={isBatchMode ? "primary" : "secondary"}
+                onClick={toggleBatchMode}
+              >
+                {isBatchMode ? "Cancel Selection Mode" : "Batch Configuration Mode"}
+              </Button>
+              <Link to={`/vm/block-schedule?venueId=${selectedVenueId}&date=${formatDateISO(selectedDate)}`}>
+                <Button variant="danger">Block Time Slots</Button>
+              </Link>
+            </>
+          )}
+        </div>
       </PageHeader>
 
       {venues.length === 0 ? (
@@ -206,6 +405,33 @@ export default function VenueCalendarPage() {
         </EmptyState>
       ) : (
         <>
+          {/* Batch Mode Selection Banner */}
+          {isBatchMode && (
+            <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-200">
+              <div>
+                <h4 className="font-bold text-white text-base">Batch Configuration Mode Active</h4>
+                <p className="text-sm text-gray-300">
+                  Select multiple calendar cells below to update their rate or schedules together. Selected:{" "}
+                  <strong className="text-primary font-bold text-lg">{selectedDates.size}</strong> date(s).
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" size="sm" onClick={handleSelectWeekdays}>
+                  Select Weekdays
+                </Button>
+                <Button variant="secondary" size="sm" onClick={handleSelectWeekends}>
+                  Select Weekends
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleClearSelection}>
+                  Clear Selection
+                </Button>
+                <Button size="sm" onClick={openConfigModal} disabled={selectedDates.size === 0}>
+                  Configure Selected ({selectedDates.size})
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Venue Selector */}
           <div className="max-w-md bg-surface border border-surface-lighter rounded-xl p-4">
             <Select
@@ -256,29 +482,50 @@ export default function VenueCalendarPage() {
                     }
 
                     const { reservations, blockedSlots } = getDayEvents(date);
-                    const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
+                    const dateStr = formatDateISO(date);
+                    
+                    const isBatchSelected = isBatchMode && selectedDates.has(dateStr);
+                    const isSingleSelected = !isBatchMode && selectedDate && selectedDate.toDateString() === date.toDateString();
                     const isToday = today.toDateString() === date.toDateString();
+                    
+                    const eff = getEffectiveDetails(date);
+
+                    const baseClass = "aspect-square rounded-lg flex flex-col justify-between p-2 text-left relative transition-all group hover:border-primary/50 border cursor-pointer";
+                    let bgClass = "bg-surface-light/40 border-surface-lighter text-gray-300";
+
+                    if (isBatchSelected) {
+                      bgClass = "bg-primary border-primary text-white font-bold shadow-lg shadow-primary/30";
+                    } else if (isSingleSelected) {
+                      bgClass = "bg-primary/20 border-primary text-white font-bold";
+                    } else if (isToday) {
+                      bgClass = "bg-surface-light border-secondary/50 text-secondary";
+                    } else if (eff.isClosed) {
+                      bgClass = "bg-danger/10 border-danger/20 text-gray-500 line-through";
+                    }
 
                     return (
                       <button
                         key={`day-${date.getDate()}`}
-                        onClick={() => setSelectedDate(date)}
-                        className={`aspect-square rounded-lg flex flex-col justify-between p-2 text-left relative transition-all group hover:border-primary/50 border ${
-                          isSelected
-                            ? "bg-primary/20 border-primary text-white font-bold"
-                            : isToday
-                            ? "bg-surface-light border-secondary/50 text-secondary"
-                            : "bg-surface-light/40 border-surface-lighter text-gray-300"
-                        }`}
+                        onClick={() => handleDateClick(date)}
+                        type="button"
+                        className={`${baseClass} ${bgClass}`}
                       >
-                        <span>{date.getDate()}</span>
+                        <span className="text-xs font-medium">{date.getDate()}</span>
                         
-                        <div className="flex gap-1 mt-auto">
-                          {blockedSlots.length > 0 && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-danger" title={`${blockedSlots.length} Blocked slot(s)`}></span>
-                          )}
-                          {reservations.length > 0 && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-info" title={`${reservations.length} Reservation(s)`}></span>
+                        <div className="flex flex-wrap gap-1 mt-auto justify-between items-center w-full">
+                          <div className="flex gap-1">
+                            {blockedSlots.length > 0 && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-danger" title={`${blockedSlots.length} Blocked slot(s)`}></span>
+                            )}
+                            {reservations.length > 0 && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-info" title={`${reservations.length} Reservation(s)`}></span>
+                            )}
+                          </div>
+                          
+                          {eff.hasOverride && (
+                            <span className="text-[10px] font-bold text-warning" title="Date override configuration active">
+                              ₱
+                            </span>
                           )}
                         </div>
                       </button>
@@ -290,19 +537,69 @@ export default function VenueCalendarPage() {
               {/* Day Details Side Card */}
               <div className="bg-surface border border-surface-lighter rounded-2xl p-6 flex flex-col justify-between">
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-bold text-white mb-1">
-                      Schedule Details
-                    </h3>
-                    <p className="text-sm text-gray-400">
-                      {selectedDate.toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-lg font-bold text-white mb-1">
+                        Schedule Details
+                      </h3>
+                      <p className="text-sm text-gray-400">
+                        {selectedDate.toLocaleDateString("en-US", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    
+                    {!isBatchMode && currentDayEff && (
+                      <button
+                        type="button"
+                        onClick={() => openConfigForSingleDate(selectedDate)}
+                        className="text-xs text-primary hover:underline font-bold"
+                      >
+                        Customize Date
+                      </button>
+                    )}
                   </div>
+
+                  {/* Pricing and Operating Hours Overview */}
+                  {currentDayEff && (
+                    <div className="p-4 bg-surface-light border border-surface-lighter rounded-xl space-y-3">
+                      <div>
+                        <span className="text-xs text-gray-400 block font-medium">Pricing / Rate</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-sm font-bold text-white">
+                            ₱{currentDayEff.rate.toLocaleString()} / {currentDayEff.rateType === "HOURLY" ? "hour" : "flat"}
+                          </span>
+                          {getDateConfig(selectedDate)?.rate !== undefined && (
+                            <span className="text-[10px] bg-warning/20 border border-warning/30 text-warning px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                              Custom Override
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-px bg-surface-lighter" />
+                      <div>
+                        <span className="text-xs text-gray-400 block font-medium">Operating Hours</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-sm font-bold ${currentDayEff.isClosed ? "text-danger" : "text-white"}`}>
+                            {currentDayEff.isClosed ? "Closed / Blocked" : `${currentDayEff.openTime} - ${currentDayEff.closeTime}`}
+                          </span>
+                          {getDateConfig(selectedDate)?.openTime !== undefined && (
+                            <span className="text-[10px] bg-warning/20 border border-warning/30 text-warning px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                              Custom Hours
+                            </span>
+                          )}
+                          {currentDayEff.isClosed && (
+                            <span className="text-[10px] bg-danger/20 border border-danger/30 text-danger px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                              Closed
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {totalSelectedEvents === 0 ? (
                     <div className="text-center py-8 bg-surface-dark/30 rounded-xl border border-surface-lighter/50">
@@ -311,7 +608,7 @@ export default function VenueCalendarPage() {
                       <p className="text-xs text-gray-500 mt-1">This day is completely free.</p>
                     </div>
                   ) : (
-                    <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                    <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
                       {/* Blocked Slots */}
                       {selectedDayEvents.blockedSlots.map((b) => (
                         <div key={b.id} className="p-3 bg-danger/10 border border-danger/30 rounded-xl space-y-2">
@@ -374,7 +671,7 @@ export default function VenueCalendarPage() {
                   </Link>
                   <Link to="/vm/venues" className="block w-full text-center">
                     <Button variant="secondary" className="w-full">
-                      Add Booking
+                      Manage Venues
                     </Button>
                   </Link>
                 </div>
@@ -384,6 +681,161 @@ export default function VenueCalendarPage() {
           )}
         </>
       )}
+
+      {/* Batch Configuration Modal */}
+      <Modal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        title={selectedDates.size === 1 ? "Configure Single Date" : `Batch Configure ${selectedDates.size} Date(s)`}
+        size="md"
+      >
+        <form onSubmit={handleBatchSave} className="space-y-5">
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Specify customized rates or schedule overrides for the selected dates.
+          </p>
+
+          <div className="bg-surface border border-surface-lighter rounded-xl p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <input
+                id="clearOverrides"
+                name="clearOverrides"
+                type="checkbox"
+                checked={batchFormData.clearOverrides}
+                onChange={handleBatchFormChange}
+                className="w-4 h-4 rounded text-primary focus:ring-primary/40 border-surface-lighter"
+              />
+              <label htmlFor="clearOverrides" className="text-sm font-semibold text-white cursor-pointer">
+                Reset to default venue rates and schedules
+              </label>
+            </div>
+          </div>
+
+          {!batchFormData.clearOverrides && (
+            <>
+              {/* Rate Override Section */}
+              <div className="bg-surface border border-surface-lighter rounded-xl p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="applyRateOverride"
+                    name="applyRateOverride"
+                    type="checkbox"
+                    checked={batchFormData.applyRateOverride}
+                    onChange={handleBatchFormChange}
+                    className="w-4 h-4 rounded text-primary focus:ring-primary/40 border-surface-lighter"
+                  />
+                  <label htmlFor="applyRateOverride" className="text-sm font-semibold text-white cursor-pointer">
+                    Override Rate & Pricing
+                  </label>
+                </div>
+
+                {batchFormData.applyRateOverride && (
+                  <div className="grid grid-cols-2 gap-3 pl-6 animate-in slide-in-from-top-2 duration-150">
+                    <Input
+                      id="rate"
+                      name="rate"
+                      label="Override Rate (₱)"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={batchFormData.rate}
+                      onChange={handleBatchFormChange}
+                      required
+                    />
+                    <Select
+                      id="rateType"
+                      name="rateType"
+                      label="Override Type"
+                      value={batchFormData.rateType}
+                      onChange={handleBatchFormChange}
+                      placeholder="Select type"
+                      options={[
+                        { value: "HOURLY", label: "Hourly Rate" },
+                        { value: "FLAT", label: "Flat Rate" },
+                      ]}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Operating Hours Override Section */}
+              <div className="bg-surface border border-surface-lighter rounded-xl p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="applyScheduleOverride"
+                    name="applyScheduleOverride"
+                    type="checkbox"
+                    checked={batchFormData.applyScheduleOverride}
+                    onChange={handleBatchFormChange}
+                    className="w-4 h-4 rounded text-primary focus:ring-primary/40 border-surface-lighter"
+                    disabled={batchFormData.isClosed}
+                  />
+                  <label htmlFor="applyScheduleOverride" className={`text-sm font-semibold cursor-pointer ${batchFormData.isClosed ? "text-gray-500" : "text-white"}`}>
+                    Override Operating Hours
+                  </label>
+                </div>
+
+                {batchFormData.applyScheduleOverride && !batchFormData.isClosed && (
+                  <div className="grid grid-cols-2 gap-3 pl-6 animate-in slide-in-from-top-2 duration-150">
+                    <Input
+                      id="openTime"
+                      name="openTime"
+                      label="Open Time"
+                      type="time"
+                      value={batchFormData.openTime}
+                      onChange={handleBatchFormChange}
+                      required
+                    />
+                    <Input
+                      id="closeTime"
+                      name="closeTime"
+                      label="Close Time"
+                      type="time"
+                      value={batchFormData.closeTime}
+                      onChange={handleBatchFormChange}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Closed Status Override */}
+              <div className="bg-surface border border-surface-lighter rounded-xl p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="isClosed"
+                    name="isClosed"
+                    type="checkbox"
+                    checked={batchFormData.isClosed}
+                    onChange={(e) => {
+                      const closed = e.target.checked;
+                      setBatchFormData((prev) => ({
+                        ...prev,
+                        isClosed: closed,
+                        // Turn off hours override if closed
+                        applyScheduleOverride: closed ? false : prev.applyScheduleOverride
+                      }));
+                    }}
+                    className="w-4 h-4 rounded text-primary focus:ring-primary/40 border-surface-lighter"
+                  />
+                  <label htmlFor="isClosed" className="text-sm font-semibold text-danger cursor-pointer">
+                    Set Closed / Unavailable for these dates
+                  </label>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-surface-lighter">
+            <Button variant="ghost" type="button" onClick={() => setIsConfigModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={actionLoading}>
+              Save Overrides
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

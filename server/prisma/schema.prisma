@@ -90,6 +90,10 @@ model Venue {
   paymentDeadlineDays Int @default(5)
   imageUrl     String?
   isActive     Boolean  @default(true)
+  defaultRate  Float    @default(0.0)
+  defaultRateType String @default("HOURLY")
+  defaultOpenTime String @default("08:00")
+  defaultCloseTime String @default("17:00")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -101,6 +105,7 @@ model Venue {
   reservations Reservation[]
   blockedSlots BlockedSlot[]
   requirements Requirement[]
+  dateConfigs  VenueDateConfig[]
 }
 
 // ───────────── Reservation ─────────────
@@ -215,4 +220,26 @@ model AuditLog {
   // Foreign keys
   userId      String
   user        User     @relation(fields: [userId], references: [id])
+}
+
+// ───────────── VenueDateConfig ─────────────
+// Date-specific overrides for venue rates and schedules.
+
+model VenueDateConfig {
+  id          String   @id @default(uuid())
+  venueId     String
+  date        DateTime // YYYY-MM-DD (stored as DateTime at 00:00:00.000Z)
+  
+  rate        Float?
+  rateType    String?  // "HOURLY" or "FLAT"
+  openTime    String?  // "HH:MM"
+  closeTime   String?  // "HH:MM"
+  isClosed    Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, date])
 }

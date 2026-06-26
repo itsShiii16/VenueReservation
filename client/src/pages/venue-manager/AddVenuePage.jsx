@@ -1,7 +1,3 @@
-/**
- * AddVenuePage.jsx — Form to create a new venue
- */
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { venueService } from "../../services/venueService";
@@ -9,6 +5,7 @@ import Input from "../../components/Input";
 import Textarea from "../../components/Textarea";
 import Button from "../../components/Button";
 import PageHeader from "../../components/PageHeader";
+import Select from "../../components/Select";
 
 export default function AddVenuePage() {
   const navigate = useNavigate();
@@ -22,6 +19,10 @@ export default function AddVenuePage() {
     managingUnit: "",
     rules: "",
     imageUrl: "",
+    defaultRate: "0",
+    defaultRateType: "HOURLY",
+    defaultOpenTime: "08:00",
+    defaultCloseTime: "17:00",
   });
 
   const handleChange = (e) => {
@@ -36,6 +37,7 @@ export default function AddVenuePage() {
       await venueService.create({
         ...formData,
         capacity: parseInt(formData.capacity),
+        defaultRate: parseFloat(formData.defaultRate || 0),
         amenities: [],
         equipment: [],
       });
@@ -58,8 +60,34 @@ export default function AddVenuePage() {
 
         <Input id="name" label="Venue Name" name="name" placeholder="e.g., Cine Adarna" value={formData.name} onChange={handleChange} required />
         <Input id="location" label="Location" name="location" placeholder="Building, Campus" value={formData.location} onChange={handleChange} required />
-        <Input id="capacity" label="Capacity" name="capacity" type="number" min="1" placeholder="Maximum number of people" value={formData.capacity} onChange={handleChange} required />
-        <Input id="managingUnit" label="Managing Unit" name="managingUnit" placeholder="e.g., UP Film Institute" value={formData.managingUnit} onChange={handleChange} />
+        
+        <div className="grid grid-cols-2 gap-4">
+          <Input id="capacity" label="Capacity" name="capacity" type="number" min="1" placeholder="Max people" value={formData.capacity} onChange={handleChange} required />
+          <Input id="managingUnit" label="Managing Unit" name="managingUnit" placeholder="e.g., UP Film Institute" value={formData.managingUnit} onChange={handleChange} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 border-t border-surface-lighter pt-4">
+          <Input id="defaultRate" label="Default Rate (₱)" name="defaultRate" type="number" min="0" step="any" placeholder="0" value={formData.defaultRate} onChange={handleChange} required />
+          <Select
+            id="defaultRateType"
+            label="Rate Type"
+            name="defaultRateType"
+            value={formData.defaultRateType}
+            onChange={handleChange}
+            placeholder="Select type"
+            options={[
+              { value: "HOURLY", label: "Hourly Rate" },
+              { value: "FLAT", label: "Flat Rate" },
+            ]}
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Input id="defaultOpenTime" label="Default Open Time" name="defaultOpenTime" type="time" value={formData.defaultOpenTime} onChange={handleChange} required />
+          <Input id="defaultCloseTime" label="Default Close Time" name="defaultCloseTime" type="time" value={formData.defaultCloseTime} onChange={handleChange} required />
+        </div>
+
         <Textarea id="description" label="Description" name="description" placeholder="Describe the venue..." value={formData.description} onChange={handleChange} />
         <Textarea id="rules" label="Rules & Guidelines" name="rules" placeholder="Venue-specific rules..." value={formData.rules} onChange={handleChange} rows={3} />
         <Input id="imageUrl" label="Image URL (optional)" name="imageUrl" placeholder="https://..." value={formData.imageUrl} onChange={handleChange} />

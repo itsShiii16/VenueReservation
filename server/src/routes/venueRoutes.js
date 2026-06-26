@@ -18,6 +18,7 @@ const {
   createVenue,
   updateVenue,
   deleteVenue,
+  batchConfigureDates,
 } = require("../controllers/venueController");
 const { authenticate } = require("../middleware/authenticate");
 const { authorizeRoles } = require("../middleware/authorizeRoles");
@@ -37,6 +38,13 @@ router.post(
   createVenueRules,
   validate,
   createVenue
+);
+
+router.post(
+  "/:id/date-configs/batch",
+  authenticate,
+  authorizeRoles("VENUE_MANAGER"),
+  batchConfigureDates
 );
 
 router.put(

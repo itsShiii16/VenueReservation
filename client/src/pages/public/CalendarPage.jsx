@@ -154,6 +154,43 @@ export default function CalendarPage() {
 
     if (!venueDetails) return "available";
 
+    // Check date configuration override
+    const dateStr = day.toISOString().split("T")[0];
+    const config = (venueDetails.dateConfigs || []).find((c) => {
+      const cStr = new Date(c.date).toISOString().split("T")[0];
+      return cStr === dateStr;
+    });
+
+    if (config) {
+      if (config.isClosed) {
+        return "blocked";
+      }
+      if (config.openTime && config.closeTime) {
+        const [openH, openM] = config.openTime.split(":").map(Number);
+        const [closeH, closeM] = config.closeTime.split(":").map(Number);
+        const blockStart = block.startHour + block.startMin / 60;
+        const blockEnd = block.endHour + block.endMin / 60;
+        const openVal = openH + openM / 60;
+        const closeVal = closeH + closeM / 60;
+        if (blockStart < openVal || blockEnd > closeVal) {
+          return "blocked";
+        }
+      }
+    } else {
+      // Check default operating hours
+      const defaultOpen = venueDetails.defaultOpenTime || "08:00";
+      const defaultClose = venueDetails.defaultCloseTime || "17:00";
+      const [openH, openM] = defaultOpen.split(":").map(Number);
+      const [closeH, closeM] = defaultClose.split(":").map(Number);
+      const blockStart = block.startHour + block.startMin / 60;
+      const blockEnd = block.endHour + block.endMin / 60;
+      const openVal = openH + openM / 60;
+      const closeVal = closeH + closeM / 60;
+      if (blockStart < openVal || blockEnd > closeVal) {
+        return "blocked";
+      }
+    }
+
     // 2. Check if blocked
     const hasBlocked = (venueDetails.blockedSlots || []).some((b) => {
       const bStart = new Date(b.startTime);
@@ -181,6 +218,20 @@ export default function CalendarPage() {
     if (hasReservation) return "reserved";
 
     return "available";
+  };
+
+  const getSelectedSlotRate = () => {
+    if (!selectedSlot || !venueDetails) return "";
+    const dateStr = selectedSlot.dateISO;
+    const config = (venueDetails.dateConfigs || []).find((c) => {
+      const cStr = new Date(c.date).toISOString().split("T")[0];
+      return cStr === dateStr;
+    });
+    
+    const rate = config && config.rate !== null ? config.rate : (venueDetails.defaultRate ?? 0);
+    const rateType = config && config.rateType ? config.rateType : (venueDetails.defaultRateType || "HOURLY");
+    
+    return `₱${rate.toLocaleString()} / ${rateType === "HOURLY" ? "hour" : "flat"}`;
   };
 
   const handleSelectSlot = (day, block, status) => {
@@ -473,6 +524,21 @@ export default function CalendarPage() {
                   {selectedSlot ? selectedSlot.timeLabel : "Not selected"}
                 </span>
               </div>
+
+              {selectedSlot && (
+                <>
+                  <div className="border-t border-surface-lighter" />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-zinc-400 text-xs font-semibold uppercase tracking-wider">
+                      <span className="font-bold pl-0.5">₱</span>
+                      <span className="pl-1">Rate</span>
+                    </div>
+                    <span className="block text-sm pl-5 font-bold text-gray-100">
+                      {getSelectedSlotRate()}
+                    </span>
+                  </div>
+                </>
+              )}
 
             </div>
           </div>
