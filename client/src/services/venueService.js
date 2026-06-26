@@ -1,42 +1,19 @@
 /**
- * venueService.js — Replaces API calls with local DB operations
+ * venueService.js - Backend-backed venue API calls.
  */
 
-import { db } from "./mockDb";
+import api from "./api";
 
 export const venueService = {
-  getAll: async () => {
-    return {
-      success: true,
-      data: db.getVenues(),
-    };
-  },
+  getAll: async () => api.get("/venues"),
 
-  getById: async (id) => {
-    return {
-      success: true,
-      data: db.getVenueById(id),
-    };
-  },
+  getById: async (id) => api.get(`/venues/${id}`),
 
-  create: async (data) => {
-    return {
-      success: true,
-      data: db.createVenue(data),
-    };
-  },
+  getAvailability: async (id) => api.get(`/venues/${id}/availability`),
 
-  update: async (id, data) => {
-    return {
-      success: true,
-      data: db.updateVenue(id, data),
-    };
-  },
+  create: async (data) => api.post("/venues", data),
 
-  delete: async (id) => {
-    db.deleteVenue(id);
-    return {
-      success: true,
-    };
-  },
+  update: async (id, data) => api.put(`/venues/${id}`, data),
+
+  delete: async (id) => api.delete(`/venues/${id}`),
 };

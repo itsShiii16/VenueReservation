@@ -1,40 +1,54 @@
 /**
- * AuthContext.jsx — Client-side Authentication Context Provider
- *
- * Uses mockDb to check credentials, save current session, and sync user state.
+ * AuthContext.jsx - Authentication context provider.
  */
 
-import { createContext, useState, useEffect } from "react";
-import { db, subscribe } from "../services/mockDb";
+import { createContext, useEffect, useState } from "react";
+import { authService } from "../services/authService";
 
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(db.getCurrentUser());
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Sync state with changes to the local store (like updating profile or logout)
   useEffect(() => {
-    const unsubscribe = subscribe((store) => {
-      setUser(store.currentUser);
-    });
-    return unsubscribe;
+    const hydrateUser = async () => {
+      const token = localStorage.getItem("vrs_token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await authService.getMe();
+        setUser(response.data);
+      } catch {
+        localStorage.removeItem("vrs_token");
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    hydrateUser();
   }, []);
 
   const login = async (email, password) => {
-    const loggedUser = db.login(email, password);
-    setUser(loggedUser);
-    return loggedUser;
+    const response = await authService.login({ email, password });
+    localStorage.setItem("vrs_token", response.data.token);
+    setUser(response.data.user);
+    return response.data.user;
   };
 
   const register = async (formData) => {
-    const registeredUser = db.register(formData);
-    setUser(registeredUser);
-    return registeredUser;
+    const response = await authService.register(formData);
+    localStorage.setItem("vrs_token", response.data.token);
+    setUser(response.data.user);
+    return response.data.user;
   };
 
   const logout = () => {
-    db.logout();
+    localStorage.removeItem("vrs_token");
     setUser(null);
   };
 

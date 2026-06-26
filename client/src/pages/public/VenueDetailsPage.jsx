@@ -1,21 +1,72 @@
 /**
- * VenueDetailsPage.jsx — View a single venue's details
+ * VenueDetailsPage.jsx - View a single venue's details
  */
 
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { CheckCircle2, Clock3, CreditCard, MapPin, UsersRound } from "lucide-react";
 import { venueService } from "../../services/venueService";
-import { mockVenues } from "../../data/mockVenues";
-import PageHeader from "../../components/PageHeader";
-import Button from "../../components/Button";
 import LoadingState from "../../components/LoadingState";
+import heroImage from "../../assets/hero.png";
 import { useAuth } from "../../hooks/useAuth";
+
+const venueImages = {
+  "venue-1":
+    "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80",
+  "venue-2":
+    "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80",
+  "venue-3": heroImage,
+  "venue-4":
+    "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+};
+
+const venueDisplay = {
+  "venue-1": {
+    name: "Cine Adarna",
+    manager: "UPFI Office",
+    email: "admin@upfi.up.edu.ph",
+    location: "UP Film Institute",
+    capacity: 800,
+    rate: "P5,000 / 4 hours",
+    time: "08:00 AM - 10:00 PM",
+  },
+  "venue-2": {
+    name: "Palma Hall Room 400",
+    manager: "CSSP Office",
+    email: "admin@cssp.up.edu.ph",
+    location: "Palma Hall",
+    capacity: 200,
+    rate: "P2,000 / 4 hours",
+    time: "08:00 AM - 05:00 PM",
+  },
+  "venue-3": {
+    name: "CS Amphitheater",
+    manager: "CS Admin",
+    email: "admin@cs.up.edu.ph",
+    location: "College of Science",
+    capacity: 350,
+    rate: "P1,500 / 4 hours",
+    time: "08:00 AM - 08:00 PM",
+  },
+  "venue-4": {
+    name: "Melchor Hall Conference Room",
+    manager: "CoE Admin",
+    email: "admin@coe.up.edu.ph",
+    location: "College of Engineering",
+    capacity: 25,
+    rate: "P1,000 / 4 hours",
+    time: "08:00 AM - 05:00 PM",
+  },
+};
+
+const tabs = ["Overview", "Amenities & Equipments", "Requirements", "Rules"];
 
 export default function VenueDetailsPage() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
   const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("Overview");
 
   useEffect(() => {
     const fetchVenue = async () => {
@@ -23,8 +74,7 @@ export default function VenueDetailsPage() {
         const res = await venueService.getById(id);
         setVenue(res.data);
       } catch {
-        // Fallback to mock data
-        setVenue(mockVenues.find((v) => v.id === id) || null);
+        setVenue(null);
       } finally {
         setLoading(false);
       }
@@ -35,100 +85,150 @@ export default function VenueDetailsPage() {
   if (loading) return <LoadingState message="Loading venue details..." />;
   if (!venue) {
     return (
-      <div className="text-center py-16">
-        <h2 className="text-xl font-bold text-gray-200">Venue not found</h2>
-        <Link to="/venues" className="text-primary mt-2 inline-block">Back to venues</Link>
+      <div className="py-16 text-center">
+        <h2 className="text-xl font-bold text-gray-100">Venue not found</h2>
+        <Link to="/venues" className="mt-2 inline-block text-primary">Back to venues</Link>
       </div>
     );
   }
 
+  const display = venueDisplay[venue.id] || {};
+  const venueName = display.name || venue.name;
+  const location = display.location || venue.location;
+
   return (
-    <div>
-      <PageHeader title={venue.name} subtitle={venue.location}>
-        {isAuthenticated && (
-          <Link to={`/reserve?venueId=${venue.id}`}>
-            <Button>Reserve This Venue</Button>
-          </Link>
-        )}
-      </PageHeader>
+    <div className="mx-auto grid max-w-6xl gap-10 pb-12 lg:grid-cols-[1fr_400px]">
+      <div className="space-y-9">
+        <img
+          src={venue.imageUrl || venueImages[venue.id] || heroImage}
+          alt={venueName}
+          className="h-[470px] w-full rounded-2xl object-cover"
+        />
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Main Info */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Image */}
-          <div className="h-64 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl flex items-center justify-center">
-            {venue.imageUrl ? (
-              <img src={venue.imageUrl} alt={venue.name} className="w-full h-full object-cover rounded-xl" />
-            ) : (
-              <span className="text-6xl">🏛️</span>
-            )}
+        <div className="border-b border-zinc-200">
+          <div className="flex flex-wrap gap-10">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`border-b-2 px-1 pb-5 text-base font-bold transition ${
+                  activeTab === tab
+                    ? "border-primary text-primary"
+                    : "border-transparent text-gray-400 hover:text-gray-100"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
-
-          {/* Description */}
-          {venue.description && (
-            <div className="bg-surface border border-surface-lighter rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-100 mb-2">About</h3>
-              <p className="text-gray-300 leading-relaxed">{venue.description}</p>
-            </div>
-          )}
-
-          {/* Rules */}
-          {venue.rules && (
-            <div className="bg-surface border border-surface-lighter rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-100 mb-2">Rules & Guidelines</h3>
-              <p className="text-gray-300">{venue.rules}</p>
-            </div>
-          )}
         </div>
 
-        {/* Sidebar Info */}
-        <div className="space-y-6">
-          {/* Quick Facts */}
-          <div className="bg-surface border border-surface-lighter rounded-xl p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-100">Details</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Capacity</span>
-                <span className="text-gray-200">{venue.capacity} persons</span>
-              </div>
-              {venue.managingUnit && (
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Managing Unit</span>
-                  <span className="text-gray-200">{venue.managingUnit}</span>
-                </div>
+        {activeTab === "Overview" && (
+          <div className="space-y-8">
+            <p className="text-xl leading-relaxed text-gray-400">
+              The {venueName} is a versatile space located at {location}. Managed by the{" "}
+              {display.manager || venue.managingUnit || "assigned UP Diliman unit"}, it is ideal
+              for campus events with up to {display.capacity || venue.capacity} attendees. Please
+              review the specific requirements and rules before submitting a reservation request.
+            </p>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <InfoCard icon={UsersRound} label="Max Capacity" value={`${display.capacity || venue.capacity} people`} />
+              <InfoCard icon={Clock3} label="Available Time" value={display.time || "08:00 AM - 05:00 PM"} />
+              <InfoCard icon={CreditCard} label="Venue Rate" value={display.rate || "Rate to be confirmed"} />
+              {isAuthenticated && (
+                <InfoCard icon={CheckCircle2} label="Status" value="Available to Book" positive />
               )}
             </div>
           </div>
+        )}
 
-          {/* Amenities */}
-          {venue.amenities?.length > 0 && (
-            <div className="bg-surface border border-surface-lighter rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-100 mb-3">Amenities</h3>
-              <div className="flex flex-wrap gap-2">
-                {venue.amenities.map((a) => (
-                  <span key={a} className="px-2.5 py-1 bg-primary/10 text-primary text-xs rounded-full">
-                    {a}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+        {activeTab === "Amenities & Equipments" && (
+          <PillList items={[...(venue.amenities || []), ...(venue.equipment || [])]} />
+        )}
 
-          {/* Equipment */}
-          {venue.equipment?.length > 0 && (
-            <div className="bg-surface border border-surface-lighter rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-100 mb-3">Equipment</h3>
-              <div className="flex flex-wrap gap-2">
-                {venue.equipment.map((e) => (
-                  <span key={e} className="px-2.5 py-1 bg-secondary/10 text-secondary text-xs rounded-full">
-                    {e}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        {activeTab === "Requirements" && (
+          <PillList items={venue.supplementaryRequirements || venue.requirements || ["Submitted through uploaded files"]} />
+        )}
+
+        {activeTab === "Rules" && (
+          <p className="text-xl leading-relaxed text-gray-400">{venue.rules || "No special rules listed."}</p>
+        )}
       </div>
+
+      <aside className="lg:pt-8">
+        <div className="sticky top-24 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
+          <h2 className="text-2xl font-extrabold text-gray-100">Reserve This Venue</h2>
+          {isAuthenticated ? (
+            <>
+              <p className="mt-3 text-lg text-gray-400">Check availability and book your schedule.</p>
+
+              <Link
+                to={`/calendar?venueId=${venue.id}`}
+                className="mt-8 flex min-h-14 items-center justify-center rounded-lg bg-primary px-5 text-lg font-bold text-white shadow-md shadow-primary/20 transition hover:bg-primary-dark"
+              >
+                Check Availability
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="mt-3 text-lg text-gray-400">
+                Sign in to check venue availability and reservation status.
+              </p>
+              <Link
+                to="/login"
+                className="mt-8 flex min-h-14 items-center justify-center rounded-lg bg-primary px-5 text-lg font-bold text-white shadow-md shadow-primary/20 transition hover:bg-primary-dark"
+              >
+                Sign in to Check Availability
+              </Link>
+            </>
+          )}
+
+          <div className="my-8 h-px bg-zinc-200" />
+
+          <h3 className="text-lg font-extrabold text-gray-100">Need help?</h3>
+          <p className="mt-3 text-base leading-relaxed text-gray-400">
+            Contact the managing unit for specific inquiries regarding this venue.
+          </p>
+
+          <div className="mt-4 rounded-xl border border-zinc-100 bg-zinc-50 p-4">
+            <p className="font-bold text-gray-100">{display.manager || venue.managingUnit || "Managing Office"}</p>
+            <p className="mt-2 text-primary">{display.email || "venue-admin@up.edu.ph"}</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function InfoCard({ icon: Icon, label, value, positive = false }) {
+  return (
+    <div className="flex items-center gap-5 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className={`flex h-12 w-12 items-center justify-center rounded-full ${positive ? "bg-green-50 text-success" : "bg-zinc-100 text-gray-400"}`}>
+        <Icon className="h-6 w-6" aria-hidden="true" />
+      </div>
+      <div>
+        <p className="text-base text-gray-400">{label}</p>
+        <p className={`mt-1 text-lg font-extrabold ${positive ? "text-success" : "text-gray-100"}`}>
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PillList({ items }) {
+  return (
+    <div className="flex flex-wrap gap-3">
+      {items.map((item) => (
+        <span
+          key={item}
+          className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-gray-100"
+        >
+          {item}
+        </span>
+      ))}
     </div>
   );
 }

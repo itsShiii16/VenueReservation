@@ -56,7 +56,14 @@ export default function AppRoutes() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/venues" element={<VenueDirectoryPage />} />
         <Route path="/venues/:id" element={<VenueDetailsPage />} />
-        <Route path="/calendar" element={<CalendarPage />} />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
         {/* ─── Client Routes (require auth) ─── */}

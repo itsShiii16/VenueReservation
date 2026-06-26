@@ -2,36 +2,48 @@
  * Navbar.jsx — Top navigation bar
  */
 
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { getRoleLabel, getDefaultPath } from "../utils/roleHelpers";
+import { LogOut, UserRound } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
+  const navClass = ({ isActive }) =>
+    `text-sm font-medium transition-colors pb-1 ${
+      isActive
+        ? "text-gray-100 border-b-2 border-primary"
+        : "text-gray-400 hover:text-gray-100"
+    }`;
 
   return (
-    <nav className="bg-surface/80 backdrop-blur-md border-b border-surface-lighter sticky top-0 z-40">
+    <nav className="bg-white/95 backdrop-blur-md border-b border-zinc-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">V</span>
+            <div className="w-10 h-10 bg-primary rounded-md flex items-center justify-center">
+              <span className="text-white font-bold text-sm">UP</span>
             </div>
-            <span className="text-lg font-bold text-gray-100">VRS</span>
+            <span className="text-lg font-bold text-gray-100">Venue Reservation</span>
           </Link>
 
           {/* Navigation Links */}
-          <div className="flex items-center gap-6">
-            <Link
-              to="/venues"
-              className="text-sm text-gray-400 hover:text-gray-100 transition-colors"
-            >
+          <div className="hidden md:flex items-center gap-10">
+            <NavLink to="/" className={navClass} end>
+              Home
+            </NavLink>
+            <NavLink to="/venues" className={navClass}>
               Venues
-            </Link>
+            </NavLink>
+            <NavLink to="/my-reservations" className={navClass}>
+              My Reservations
+            </NavLink>
+          </div>
 
+          <div className="flex items-center gap-5">
             {isAuthenticated ? (
-              <div className="flex items-center gap-4">
+              <>
                 {/* Dashboard link based on role */}
                 {user.role !== "CLIENT" && (
                   <Link
@@ -41,44 +53,49 @@ export default function Navbar() {
                     Dashboard
                   </Link>
                 )}
-                <Link
-                  to="/my-reservations"
-                  className="text-sm text-gray-400 hover:text-gray-100 transition-colors"
-                >
-                  My Reservations
-                </Link>
 
                 {/* User menu */}
-                <div className="flex items-center gap-3 pl-4 border-l border-surface-lighter">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-200">
-                      {user.firstName} {user.lastName}
-                    </p>
-                    <p className="text-xs text-gray-500">{getRoleLabel(user.role)}</p>
+                <div className="flex items-center gap-5 pl-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <UserRound className="h-4 w-4" aria-hidden="true" />
+                    <span>{getRoleLabel(user.role)}</span>
                   </div>
                   <button
                     onClick={logout}
-                    className="text-sm text-gray-400 hover:text-danger transition-colors"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-gray-100 transition-colors hover:text-danger"
                   >
-                    Logout
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    Log out
                   </button>
+                  <Link
+                    to={user.role === "SYSTEM_ADMIN" ? "/admin/dashboard" : "/login"}
+                    className="text-sm text-gray-500 hover:text-primary transition-colors"
+                  >
+                    Admin
+                  </Link>
                 </div>
-              </div>
+              </>
             ) : (
-              <div className="flex items-center gap-3">
+              <>
                 <Link
                   to="/login"
-                  className="text-sm text-gray-400 hover:text-gray-100 transition-colors"
+                  className="text-sm font-semibold text-gray-100 hover:text-primary transition-colors"
                 >
-                  Login
+                  Log in
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-5 py-3 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-md transition-colors"
                 >
-                  Sign Up
+                  Sign up
                 </Link>
-              </div>
+                <Link
+                  to="/login"
+                  className="text-sm text-gray-500 hover:text-primary transition-colors"
+                >
+                  Admin
+                </Link>
+              </>
             )}
           </div>
         </div>

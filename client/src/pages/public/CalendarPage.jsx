@@ -22,8 +22,8 @@ export default function CalendarPage() {
   // View state: 'day' | 'week' | 'month' (default is 'week' based on screenshot)
   const [viewMode, setViewMode] = useState("week");
 
-  // Calendar time window state (defaults to June 2026 to match screenshot date "June 25, 2026")
-  const defaultDate = new Date("2026-06-25T00:00:00");
+  // Calendar time window state.
+  const defaultDate = new Date();
   const [currentDate, setCurrentDate] = useState(defaultDate);
   const [selectedSlot, setSelectedSlot] = useState(null); // { date: Date, startTime: string, endTime: string, timeLabel: string }
 
@@ -72,7 +72,7 @@ export default function CalendarPage() {
     const fetchDetails = async () => {
       setLoadingDetails(true);
       try {
-        const res = await venueService.getById(selectedVenueId);
+        const res = await venueService.getAvailability(selectedVenueId);
         setVenueDetails(res.data);
       } catch (err) {
         console.error("Error fetching details:", err);
@@ -146,7 +146,7 @@ export default function CalendarPage() {
     }
     // If today, check if the hour block has already passed
     if (slotDate.getTime() === todayDate.getTime()) {
-      const currentHour = 7; // Mocking today's current hour to 7 AM so all blocks today are available, matching the screenshot
+      const currentHour = new Date().getHours();
       if (block.endHour <= currentHour) {
         return "past";
       }
@@ -221,7 +221,7 @@ export default function CalendarPage() {
 
   if (loadingVenues || loadingDetails) return <LoadingState message="Loading availability calendar..." />;
 
-  const currentVenueName = venueDetails?.name || "Palma Hall Room 400";
+  const currentVenueName = venueDetails?.name || "Selected Venue";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

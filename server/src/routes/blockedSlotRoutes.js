@@ -19,8 +19,8 @@ const { authorizeRoles } = require("../middleware/authorizeRoles");
 const { validate } = require("../middleware/validate");
 const { createBlockedSlotRules } = require("../validators/blockedSlotValidators");
 
-// Public: view blocked slots for a venue
-router.get("/:venueId", getByVenue);
+// Authenticated users can view blocked slots as part of availability checking.
+router.get("/:venueId", authenticate, getByVenue);
 
 // Protected: manage blocked slots (VENUE_MANAGER only)
 router.post(

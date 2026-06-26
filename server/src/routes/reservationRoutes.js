@@ -1,16 +1,5 @@
 /**
- * reservationRoutes.js — Reservation Routes
- *
- * Client routes:
- *   GET   /api/reservations/my              — My reservations
- *   POST  /api/reservations                 — Create reservation
- *   GET   /api/reservations/:id             — Reservation details
- *   PATCH /api/reservations/:id/cancel      — Cancel reservation
- *
- * Venue Manager routes:
- *   GET   /api/reservations/venue-manager   — Reservations for my venues
- *   PATCH /api/reservations/:id/approve     — Approve reservation
- *   PATCH /api/reservations/:id/decline     — Decline reservation
+ * reservationRoutes.js - Reservation Routes
  */
 
 const express = require("express");
@@ -33,26 +22,23 @@ const {
   declineReservationRules,
 } = require("../validators/reservationValidators");
 
-// All reservation routes require authentication
 router.use(authenticate);
 
-// ─── Client Routes ───
 router.get("/my", getMyReservations);
 router.post("/", authorizeRoles("CLIENT"), createReservationRules, validate, createReservation);
-router.get("/:id", getReservationById);
-router.patch("/:id/cancel", authorizeRoles("CLIENT"), cancelReservation);
 
-// ─── Venue Manager Routes ───
 router.get(
   "/venue-manager",
   authorizeRoles("VENUE_MANAGER"),
   getVenueManagerReservations
 );
+
 router.patch(
   "/:id/approve",
   authorizeRoles("VENUE_MANAGER"),
   approveReservation
 );
+
 router.patch(
   "/:id/decline",
   authorizeRoles("VENUE_MANAGER"),
@@ -60,5 +46,8 @@ router.patch(
   validate,
   declineReservation
 );
+
+router.get("/:id", getReservationById);
+router.patch("/:id/cancel", authorizeRoles("CLIENT"), cancelReservation);
 
 module.exports = router;

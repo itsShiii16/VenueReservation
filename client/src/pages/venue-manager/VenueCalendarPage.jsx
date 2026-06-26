@@ -75,7 +75,7 @@ export default function VenueCalendarPage() {
     }
     setLoadingDetails(true);
     try {
-      const res = await venueService.getById(selectedVenueId);
+      const res = await venueService.getAvailability(selectedVenueId);
       if (res.success) {
         setVenueDetails(res.data);
       }

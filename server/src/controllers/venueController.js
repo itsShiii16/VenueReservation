@@ -36,7 +36,7 @@ const getAllVenues = async (req, res, next) => {
 
 /**
  * GET /api/venues/:id
- * Get a single venue by ID (public)
+ * Get a single venue by ID (public, no availability/status details)
  */
 const getVenueById = async (req, res, next) => {
   try {
@@ -47,21 +47,49 @@ const getVenueById = async (req, res, next) => {
           select: { id: true, firstName: true, lastName: true },
         },
         requirements: true,
+      },
+    });
+
+    if (!venue) {
+      return res.status(404).json({
+        success: false,
+        message: "Venue not found.",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: venue,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/venues/:id/availability
+ * Get venue availability details (authenticated users only)
+ */
+const getVenueAvailability = async (req, res, next) => {
+  try {
+    const venue = await prisma.venue.findUnique({
+      where: { id: req.params.id },
+      include: {
         blockedSlots: {
           where: {
-            endTime: { gte: new Date() }, // Only future blocked slots
+            endTime: { gte: new Date() },
           },
           orderBy: { startTime: "asc" },
         },
         reservations: {
           where: {
-            status: "APPROVED",
-            endTime: { gte: new Date() }, // Only future approved reservations
+            status: { in: ["PENCIL_BOOKED_DRAFT", "PAYMENT_PENDING", "BOOKED_CONFIRMED"] },
+            endTime: { gte: new Date() },
           },
           select: {
             id: true,
             eventTitle: true,
-            activityType: true,
+            status: true,
             startTime: true,
             endTime: true,
           },
@@ -70,7 +98,7 @@ const getVenueById = async (req, res, next) => {
       },
     });
 
-    if (!venue) {
+    if (!venue || !venue.isActive) {
       return res.status(404).json({
         success: false,
         message: "Venue not found.",
@@ -240,6 +268,7 @@ const deleteVenue = async (req, res, next) => {
 module.exports = {
   getAllVenues,
   getVenueById,
+  getVenueAvailability,
   createVenue,
   updateVenue,
   deleteVenue,

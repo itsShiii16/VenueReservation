@@ -14,6 +14,7 @@ const router = express.Router();
 const {
   getAllVenues,
   getVenueById,
+  getVenueAvailability,
   createVenue,
   updateVenue,
   deleteVenue,
@@ -25,6 +26,7 @@ const { createVenueRules, updateVenueRules } = require("../validators/venueValid
 
 // Public routes — no auth required
 router.get("/", getAllVenues);
+router.get("/:id/availability", authenticate, getVenueAvailability);
 router.get("/:id", getVenueById);
 
 // Protected routes — VENUE_MANAGER only
