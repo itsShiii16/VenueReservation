@@ -10,8 +10,7 @@ import Navbar from "../components/Navbar";
 
 const adminNavItems = [
   { path: "/admin/dashboard", label: "Dashboard", end: true },
-  { path: "/admin/vm-requests", label: "VM Requests" },
-  { path: "/admin/approved-managers", label: "Approved Managers" },
+  { path: "/admin/approved-managers", label: "Venue Managers" },
 ];
 
 export default function AdminLayout() {

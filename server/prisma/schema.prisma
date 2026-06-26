@@ -23,11 +23,22 @@ enum Role {
 }
 
 enum ReservationStatus {
-  SUBMITTED
+  PRELIMINARY_SUBMITTED
   UNDER_REVIEW
-  APPROVED
-  DECLINED
+  PENCIL_BOOKED_DRAFT
+  RETURNED_FOR_COMPLETION
+  EXPIRED_AUTO_REJECTED
+  PAYMENT_PENDING
+  PAYMENT_OVERDUE
+  BOOKED_CONFIRMED
+  REJECTED
   CANCELLED
+  BLOCKED
+}
+
+enum BookingSource {
+  CLIENT_SUBMITTED
+  VENUE_MANAGER_ASSISTED
 }
 
 enum VenueManagerRequestStatus {
@@ -72,6 +83,11 @@ model Venue {
   amenities    String[] // Array of amenity strings
   equipment    String[] // Array of equipment strings
   rules        String?
+  allowsPencilBooking Boolean @default(false)
+  preliminaryRequirements String[]
+  supplementaryRequirements String[]
+  pencilBookingDays Int @default(3)
+  paymentDeadlineDays Int @default(5)
   imageUrl     String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -97,9 +113,15 @@ model Reservation {
   expectedAttendees Int
   startTime         DateTime
   endTime           DateTime
-  status            ReservationStatus @default(SUBMITTED)
+  status            ReservationStatus @default(UNDER_REVIEW)
+  bookingSource     BookingSource     @default(CLIENT_SUBMITTED)
   notes             String?
   declineReason     String?
+  returnRemarks     String?
+  paymentRemarks    String?
+  pencilBookingDeadline DateTime?
+  paymentDeadline   DateTime?
+  submittedAt       DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 

@@ -72,14 +72,13 @@ const getUserById = async (req, res, next) => {
  */
 const updateProfile = async (req, res, next) => {
   try {
-    const { firstName, lastName, organization, position } = req.body;
+    const { firstName, lastName, position } = req.body;
 
     const updatedUser = await prisma.user.update({
       where: { id: req.user.id },
       data: {
         ...(firstName && { firstName }),
         ...(lastName && { lastName }),
-        ...(organization !== undefined && { organization }),
         ...(position !== undefined && { position }),
       },
       select: USER_SELECT,

@@ -19,11 +19,6 @@ const createReservationRules = [
     .isLength({ max: 200 })
     .withMessage("Event title must be at most 200 characters."),
 
-  body("activityType")
-    .trim()
-    .notEmpty()
-    .withMessage("Activity type is required."),
-
   body("expectedAttendees")
     .notEmpty()
     .withMessage("Expected attendees is required.")

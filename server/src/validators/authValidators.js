@@ -33,12 +33,6 @@ const registerRules = [
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters."),
 
-  body("organization")
-    .optional()
-    .trim()
-    .isLength({ max: 100 })
-    .withMessage("Organization must be at most 100 characters."),
-
   body("position")
     .optional()
     .trim()

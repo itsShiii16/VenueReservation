@@ -38,7 +38,15 @@ export default function ReservationRequestsPage() {
 
       {/* Filter tabs */}
       <div className="flex gap-2 mb-6">
-        {["ALL", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "DECLINED"].map((status) => (
+        {[
+          "ALL",
+          "PRELIMINARY_SUBMITTED",
+          "PENCIL_BOOKED_DRAFT",
+          "UNDER_REVIEW",
+          "PAYMENT_PENDING",
+          "BOOKED_CONFIRMED",
+          "REJECTED",
+        ].map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
@@ -48,7 +56,7 @@ export default function ReservationRequestsPage() {
                 : "bg-surface-light text-gray-400 hover:text-gray-200"
               }`}
           >
-            {status === "ALL" ? "All" : status.replace("_", " ")}
+            {status === "ALL" ? "All" : status.replaceAll("_", " ")}
           </button>
         ))}
       </div>

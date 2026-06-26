@@ -15,7 +15,6 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
-    organization: user?.organization || "",
     position: user?.position || "",
   });
 
@@ -50,7 +49,6 @@ export default function ProfilePage() {
             <Input id="lastName" label="Last Name" name="lastName" value={formData.lastName} onChange={handleChange} disabled={!editing} />
           </div>
           <Input id="email" label="Email" value={user?.email || ""} disabled />
-          <Input id="organization" label="Organization" name="organization" value={formData.organization} onChange={handleChange} disabled={!editing} />
           <Input id="position" label="Position" name="position" value={formData.position} onChange={handleChange} disabled={!editing} />
         </div>
 

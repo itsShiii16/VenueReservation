@@ -1,87 +1,78 @@
-# UP Diliman Venue Reservation System (VRS)
+# UPD Venue Reservation System
 
-A client-side, serverless mobile-responsive web application for **UP Diliman** venue reservations. This application runs entirely in the browser, utilizing a reactive mock database saved to `localStorage` for complete state persistence across reloads.
+Full-stack MVP for managing UP Diliman venue reservations.
 
-- **Frontend Tech Stack**: React + Vite + Tailwind CSS v4 + React Router v7
-- **UI/UX Elements**: Lucide React (Icons) + Sonner (Toast notifications)
-- **Local Persistence**: `mockDb.js` matching standard relational models
+## Stack
 
----
+- Frontend: React + Vite + Tailwind CSS
+- Backend: Node.js + Express
+- Database: PostgreSQL
+- ORM: Prisma
+- Auth: JWT-ready backend, local demo auth in the frontend mock store
 
-## 📁 Project Structure
+## Project Structure
 
-```
+```txt
 VenueReservation/
-├── client/                  # React frontend
-│   └── src/
-│       ├── components/      # 15 reusable UI components (Buttons, Modals, StatusBadges)
-│       ├── context/         # AuthContext provider (subscribed to mockDb changes)
-│       ├── data/            # Mock dataset (mockVenues.js, mockReservations.js)
-│       ├── hooks/           # useAuth, useApi
-│       ├── layouts/         # Layout grids (MainLayout, VMLayout, AdminLayout)
-│       ├── pages/           # 25 pages (Pencil booking, document verification, payment dashboards)
-│       ├── routes/          # AppRoutes, ProtectedRoute (RBAC Guard)
-│       ├── services/        # Relational database CRUD wrappers & mockDb.js
-│       └── utils/           # formatDate, roleHelpers
-│
-└── README.md                # Configuration & documentation
+  client/   React frontend
+  server/   Express API, Prisma schema, seed data
 ```
 
----
-
-## 🚀 Getting Started
-
-Since this is a client-side only app, **no backend, PostgreSQL, or Prisma setup is required.**
-
-### 1. Install Frontend Dependencies
+## Install
 
 ```bash
-# Navigate to the client directory
-cd client
-
-# Install the packages (React Router, Lucide, Sonner)
+cd server
 npm install
-```
-
-### 2. Start the Development Server
-
-```bash
+copy .env.example .env
+npx prisma migrate dev
+npm run seed
 npm run dev
 ```
 
-The application will start running on **[http://localhost:5173](http://localhost:5173)**.
+```bash
+cd client
+npm install
+npm run dev
+```
 
----
+Frontend: `http://localhost:5173`  
+Backend: `http://localhost:5000` by default
 
-## 🔐 Seed Accounts & Roles
+## Demo Accounts
 
-All mock database accounts use the password **`password123`**:
+All seeded/demo accounts use `password123`.
 
-| Role | Email | Password | Capabilites |
-| :--- | :--- | :--- | :--- |
-| **System Admin** | `admin@upd.edu.ph` | `password123` | Approves or Rejects Venue Manager access upgrade requests. |
-| **Venue Manager** | `carlos@upd.edu.ph`<br>`sofia@upd.edu.ph` | `password123` | Adds/edits venues, validates client documents, tracks payments, blocks schedules, and inputs assisted bookings. |
-| **Client** | `juan@upd.edu.ph`<br>`ana@upd.edu.ph` | `password123` | Browses venues, views calendars, requests reservations, uploads documents, and tracks checklist completions. |
+- System Admin: `admin@upd.edu.ph`
+- Venue Managers: `carlos@upd.edu.ph`, `sofia@upd.edu.ph`
+- Clients: `juan@upd.edu.ph`, `ana@upd.edu.ph`, `leo@upd.edu.ph`
 
----
+## Roles
 
-## 💡 Key App Workflows
+- Guest: browse venues, search, view details, and log in before reserving.
+- Client: submit requirements, monitor status, upload placeholder documents, and request cancellation.
+- Venue Manager: manage venues, review preliminary requests, accept pencil bookings, validate documents, manually track payment, block schedules, and add assisted bookings.
+- System Admin: create/edit/remove Venue Manager accounts, assign facilities or locations, and review system records.
 
-### 1. Pencil Booking (Draft Status)
-- Venues can configure whether they allow **Pencil Bookings** (Draft status) or require immediate full submission.
-- Clients can choose "Pencil Book" to hold a slot temporarily (valid for 3 days) while they compile required documents.
+## Booking Workflow
 
-### 2. Requirement Checklist Tracking
-- Every reservation tracks an array of document requirements (e.g. *Letter of Request*, *Event Proposal*, *Adviser Endorsement*).
-- Status changes dynamically: `Missing` ➔ `Uploaded` ➔ `Approved` OR `Needs Revision` (with manager remarks).
-- Clients can upload document files in their reservation details drawer, automatically updating status from `Draft` to `Submitted`.
+Venues that allow pencil booking start with `Preliminary Submitted`. Multiple clients may submit preliminary requirements for the same venue and slot. A Venue Manager accepts one request, which becomes `Pencil Booked / Draft`; competing preliminary requests for that same slot are rejected.
 
-### 3. Document Validation (Venue Managers)
-- Managers can review uploaded files on a reservation details page, and approve individual documents or send them back ("Return for Completion") with feedback remarks.
+Venues that do not allow pencil booking move directly to `Under Review` after full requirement submission.
 
-### 4. Verification & Payment Flow
-- Once all requirements are validated, managers trigger the payment flow by clicking **Request Payment** (status changes to *Payment Pending*).
-- Managers can manually click **Mark as Paid & Approve Booking** (moves status to `APPROVED` and locks the calendar) or **Mark Payment Overdue**.
+Payment is tracked manually only. The system does not process payments or store payment details. Managers move reservations through `Payment Pending`, `Payment Overdue`, and `Booked / Confirmed`.
 
-### 5. Assisted Bookings
-- Venue Managers can use the **Create Assisted Booking** modal on their dashboard to quickly book a venue on behalf of a client without filling client-side requests.
+## Verification
+
+The current frontend build passes with:
+
+```bash
+cd client
+npm.cmd run build
+```
+
+The Prisma schema validates with:
+
+```bash
+cd server
+npx.cmd prisma validate
+```

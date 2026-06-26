@@ -2,7 +2,7 @@
  * checkScheduleConflict.js — Schedule Conflict Checker
  *
  * Checks whether a proposed time range overlaps with any:
- *   1. Approved reservations for the same venue
+ *   1. Blocking reservations for the same venue
  *   2. Blocked slots for the same venue
  *
  * Overlap logic:
@@ -15,11 +15,18 @@
 
 const prisma = require("../config/db");
 
+const BLOCKING_RESERVATION_STATUSES = [
+  "PENCIL_BOOKED_DRAFT",
+  "PAYMENT_PENDING",
+  "BOOKED_CONFIRMED",
+];
+
 const checkScheduleConflict = async (venueId, startTime, endTime, excludeReservationId = null) => {
-  // 1. Check approved reservations for overlap
+  // 1. Check blocking reservations for overlap.
+  // Preliminary and under-review requests do not block the slot.
   const reservationFilter = {
     venueId,
-    status: "APPROVED",
+    status: { in: BLOCKING_RESERVATION_STATUSES },
     // Overlap: newStart < existingEnd AND newEnd > existingStart
     startTime: { lt: endTime },
     endTime: { gt: startTime },

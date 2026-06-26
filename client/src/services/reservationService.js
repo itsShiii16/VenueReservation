@@ -78,6 +78,13 @@ export const reservationService = {
     };
   },
 
+  acceptPencilBooking: async (id) => {
+    db.acceptPencilBooking(id);
+    return {
+      success: true,
+    };
+  },
+
   decline: async (id, data) => {
     db.declineReservation(id, data.declineReason);
     return {

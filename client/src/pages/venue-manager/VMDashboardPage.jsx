@@ -44,6 +44,7 @@ export default function VMDashboardPage() {
         <h3 className="text-lg font-semibold text-gray-100 mb-4">Quick Actions</h3>
         <div className="flex flex-wrap gap-3">
           <Link to="/vm/venues/add"><Button variant="secondary" size="sm">Add Venue</Button></Link>
+          <Link to="/vm/venues"><Button variant="secondary" size="sm">Add Booking</Button></Link>
           <Link to="/vm/reservations"><Button variant="secondary" size="sm">View Requests</Button></Link>
           <Link to="/vm/block-schedule"><Button variant="secondary" size="sm">Block Schedule</Button></Link>
           <Link to="/vm/calendar"><Button variant="secondary" size="sm">View Calendar</Button></Link>

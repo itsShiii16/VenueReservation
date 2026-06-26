@@ -1,16 +1,33 @@
-# React + Vite
+# UPD Venue Reservation System Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite frontend for the UPD Venue Reservation System MVP.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+The app runs at `http://localhost:5173`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Current MVP Coverage
 
-## Expanding the Oxlint configuration
+- Guests can browse venues and are redirected to log in before reserving.
+- Clients can submit requirements, track reservation status, upload placeholder documents, and request cancellation.
+- Pencil-enabled venues use preliminary submissions first; the Venue Manager must accept one request before a slot becomes `Pencil Booked / Draft`.
+- Non-pencil venues move directly to `Under Review`.
+- Venue Managers can manage venues, review requests, accept pencil bookings, move reservations through manual payment states, block schedules, and add assisted bookings.
+- System Admins create, edit, reassign, and remove Venue Manager accounts. Clients do not request Venue Manager access in the app.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Demo Accounts
+
+All local demo accounts use `password123`.
+
+- System Admin: `admin@upd.edu.ph`
+- Venue Managers: `carlos@upd.edu.ph`, `sofia@upd.edu.ph`
+- Clients: `juan@upd.edu.ph`, `ana@upd.edu.ph`
+
+## Notes
+
+The current frontend uses `src/services/mockDb.js` for local persistence while the Express + Prisma backend is aligned separately under `../server`.

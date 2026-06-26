@@ -14,7 +14,7 @@ const { generateToken } = require("../utils/generateToken");
  */
 const register = async (req, res, next) => {
   try {
-    const { firstName, lastName, email, password, organization, position } = req.body;
+    const { firstName, lastName, email, password, position } = req.body;
 
     // Check if email is already taken
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -36,7 +36,6 @@ const register = async (req, res, next) => {
         email,
         password: hashedPassword,
         role: "CLIENT", // All new users start as CLIENT
-        organization,
         position,
       },
       // Don't return the password

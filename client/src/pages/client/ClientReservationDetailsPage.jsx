@@ -83,16 +83,19 @@ export default function ClientReservationDetailsPage() {
     );
   }
 
-  const isDraft = reservation.status === "DRAFT";
-  const canCancel = ["DRAFT", "SUBMITTED", "UNDER_REVIEW"].includes(reservation.status);
+  const isDraft = reservation.status === "PENCIL_BOOKED_DRAFT";
+  const canCancel = ["PRELIMINARY_SUBMITTED", "PENCIL_BOOKED_DRAFT", "UNDER_REVIEW", "RETURNED_FOR_COMPLETION", "PAYMENT_PENDING", "PAYMENT_OVERDUE"].includes(reservation.status);
 
   // Status-specific visual highlights
   const statusStyles = {
-    DRAFT: "bg-zinc-100 text-zinc-800 border-zinc-200",
-    SUBMITTED: "bg-blue-50 text-blue-800 border-blue-200",
+    PRELIMINARY_SUBMITTED: "bg-blue-50 text-blue-800 border-blue-200",
+    PENCIL_BOOKED_DRAFT: "bg-zinc-100 text-zinc-800 border-zinc-200 border-dashed",
     UNDER_REVIEW: "bg-amber-50 text-amber-800 border-amber-200",
-    APPROVED: "bg-green-50 text-green-800 border-green-200",
-    DECLINED: "bg-red-50 text-red-800 border-red-200",
+    RETURNED_FOR_COMPLETION: "bg-orange-50 text-orange-800 border-orange-200",
+    PAYMENT_PENDING: "bg-blue-50 text-blue-800 border-blue-200",
+    PAYMENT_OVERDUE: "bg-red-50 text-red-800 border-red-200",
+    BOOKED_CONFIRMED: "bg-green-50 text-green-800 border-green-200",
+    REJECTED: "bg-red-50 text-red-800 border-red-200",
     CANCELLED: "bg-zinc-100 text-zinc-500 border-zinc-200",
   };
 
@@ -114,7 +117,7 @@ export default function ClientReservationDetailsPage() {
           </div>
           <div>
             <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${statusStyles[reservation.status] || "bg-zinc-100"}`}>
-              {reservation.status === "DRAFT" ? "PENCIL BOOKING (DRAFT)" : reservation.status}
+              {reservation.status.replaceAll("_", " ")}
             </span>
           </div>
         </div>
@@ -133,9 +136,8 @@ export default function ClientReservationDetailsPage() {
             </span>
           </div>
           <div>
-            <span className="text-zinc-500 block">Activity & Attendees</span>
-            <span className="font-semibold text-gray-100">{reservation.activityType}</span>
-            <span className="text-xs text-zinc-400 block mt-0.5">{reservation.expectedAttendees} expected attendees</span>
+            <span className="text-zinc-500 block">Expected Attendees</span>
+            <span className="font-semibold text-gray-100">{reservation.expectedAttendees} people</span>
           </div>
         </div>
 
@@ -162,8 +164,8 @@ export default function ClientReservationDetailsPage() {
         <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 text-sm flex gap-3 items-center">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600" />
           <div className="flex-1">
-            <span className="font-bold">Hold Period Active</span>
-            <p className="mt-0.5">This is a pencil booking. Please upload all required documents below. Once uploaded, your request will automatically change to <strong>Submitted</strong> status for review.</p>
+            <span className="font-bold">Pencil Booking Active</span>
+            <p className="mt-0.5">This slot is temporarily held for you. Upload the remaining requirements before the deadline so the Venue Manager can move it forward for review.</p>
           </div>
         </div>
       )}

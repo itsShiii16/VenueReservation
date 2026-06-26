@@ -14,7 +14,6 @@ export default function SignupPage() {
     lastName: "",
     email: "",
     password: "",
-    organization: "",
     position: "",
   });
   const [error, setError] = useState("");
@@ -65,7 +64,6 @@ export default function SignupPage() {
 
           <Input id="email" label="Email" name="email" type="email" placeholder="you@upd.edu.ph" value={formData.email} onChange={handleChange} required />
           <Input id="password" label="Password" name="password" type="password" placeholder="At least 6 characters" value={formData.password} onChange={handleChange} required />
-          <Input id="organization" label="Organization (optional)" name="organization" placeholder="e.g., College of Engineering" value={formData.organization} onChange={handleChange} />
           <Input id="position" label="Position (optional)" name="position" placeholder="e.g., Student, Faculty" value={formData.position} onChange={handleChange} />
 
           <Button type="submit" className="w-full" loading={loading}>

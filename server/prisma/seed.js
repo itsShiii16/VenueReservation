@@ -75,6 +75,18 @@ async function main() {
       position: "Faculty",
     },
   });
+
+  const client3 = await prisma.user.create({
+    data: {
+      firstName: "Leo",
+      lastName: "Bautista",
+      email: "leo@upd.edu.ph",
+      password: hashedPassword,
+      role: "CLIENT",
+      organization: "UP Writers Club",
+      position: "Student",
+    },
+  });
   console.log("  ✓ Created 2 Clients");
 
   const manager1 = await prisma.user.create({
@@ -115,6 +127,11 @@ async function main() {
       amenities: ["Air Conditioning", "Sound System", "Projector", "Stage Lighting"],
       equipment: ["Microphone", "Podium", "Projector Screen"],
       rules: "No food or drinks inside the theater. Events must end by 10:00 PM.",
+      allowsPencilBooking: true,
+      preliminaryRequirements: ["Letter of Intent / Request", "Activity summary"],
+      supplementaryRequirements: ["Activity flow / Event Program", "Endorsement from Dean / Adviser", "Equipment checklist"],
+      pencilBookingDays: 3,
+      paymentDeadlineDays: 5,
       imageUrl: null,
       isActive: true,
       createdById: manager1.id,
@@ -132,6 +149,11 @@ async function main() {
       amenities: ["Air Conditioning", "Projector", "Whiteboard"],
       equipment: ["Microphone", "Laptop Stand", "Extension Cords"],
       rules: "Reserving party must provide their own technician for AV equipment.",
+      allowsPencilBooking: false,
+      preliminaryRequirements: [],
+      supplementaryRequirements: ["Letter of Intent / Request", "Activity flow / Event Program", "Endorsement from Dean / Adviser", "Equipment checklist"],
+      pencilBookingDays: 3,
+      paymentDeadlineDays: 5,
       imageUrl: null,
       isActive: true,
       createdById: manager1.id,
@@ -149,6 +171,11 @@ async function main() {
       amenities: ["Open-Air Seating", "Power Outlets"],
       equipment: ["Portable Sound System"],
       rules: "Events are weather-dependent. No amplified music after 8:00 PM.",
+      allowsPencilBooking: true,
+      preliminaryRequirements: ["Letter of Intent / Request", "Activity summary"],
+      supplementaryRequirements: ["Activity flow / Event Program", "Endorsement from Dean / Adviser", "Equipment checklist"],
+      pencilBookingDays: 3,
+      paymentDeadlineDays: 5,
       imageUrl: null,
       isActive: true,
       createdById: manager2.id,
@@ -166,6 +193,11 @@ async function main() {
       amenities: ["Air Conditioning", "Projector", "Whiteboard", "Wi-Fi"],
       equipment: ["Conference Table", "Chairs", "Projector Screen"],
       rules: "Maximum of 40 persons. Please leave the room clean after use.",
+      allowsPencilBooking: false,
+      preliminaryRequirements: [],
+      supplementaryRequirements: ["Letter of Intent / Request", "Activity flow / Event Program"],
+      pencilBookingDays: 3,
+      paymentDeadlineDays: 5,
       imageUrl: null,
       isActive: true,
       createdById: manager2.id,
@@ -192,7 +224,8 @@ async function main() {
       expectedAttendees: 120,
       startTime: futureDate(7, 9),  // 7 days from now, 9 AM
       endTime: futureDate(7, 12),   // 7 days from now, 12 PM
-      status: "APPROVED",
+      status: "BOOKED_CONFIRMED",
+      bookingSource: "CLIENT_SUBMITTED",
       notes: "Need microphone and projector setup.",
       clientId: client1.id,
       venueId: venue3.id,
@@ -207,10 +240,43 @@ async function main() {
       expectedAttendees: 400,
       startTime: futureDate(14, 18), // 14 days from now, 6 PM
       endTime: futureDate(14, 21),   // 14 days from now, 9 PM
-      status: "SUBMITTED",
+      status: "PRELIMINARY_SUBMITTED",
+      bookingSource: "CLIENT_SUBMITTED",
       notes: "Requesting special lighting for the Q&A portion.",
       clientId: client2.id,
       venueId: venue1.id,
+    },
+  });
+
+  await prisma.reservation.create({
+    data: {
+      referenceNumber: "RES-20260705-0004",
+      eventTitle: "UP Writers Club Screening",
+      activityType: "Cultural Event",
+      expectedAttendees: 300,
+      startTime: futureDate(14, 18),
+      endTime: futureDate(14, 21),
+      status: "PRELIMINARY_SUBMITTED",
+      bookingSource: "CLIENT_SUBMITTED",
+      notes: "Competing preliminary request for the same Cine Adarna slot.",
+      clientId: client3.id,
+      venueId: venue1.id,
+    },
+  });
+
+  await prisma.reservation.create({
+    data: {
+      referenceNumber: "RES-20260708-0005",
+      eventTitle: "CSSP Research Forum",
+      activityType: "Seminar",
+      expectedAttendees: 180,
+      startTime: futureDate(17, 9),
+      endTime: futureDate(17, 12),
+      status: "PAYMENT_PENDING",
+      bookingSource: "CLIENT_SUBMITTED",
+      notes: "Documents approved. Awaiting manual payment confirmation.",
+      clientId: client2.id,
+      venueId: venue2.id,
     },
   });
 
@@ -222,7 +288,8 @@ async function main() {
       expectedAttendees: 35,
       startTime: futureDate(21, 8),  // 21 days from now, 8 AM
       endTime: futureDate(21, 17),   // 21 days from now, 5 PM
-      status: "DECLINED",
+      status: "REJECTED",
+      bookingSource: "CLIENT_SUBMITTED",
       declineReason: "Venue is under maintenance during the requested period.",
       clientId: client1.id,
       venueId: venue4.id,

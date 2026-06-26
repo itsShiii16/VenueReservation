@@ -34,4 +34,25 @@ export const adminService = {
       success: true,
     };
   },
+
+  createVenueManager: async (data) => {
+    return {
+      success: true,
+      data: db.createVenueManager(data),
+    };
+  },
+
+  updateVenueManager: async (id, data) => {
+    return {
+      success: true,
+      data: db.updateVenueManager(id, data),
+    };
+  },
+
+  removeVenueManager: async (id) => {
+    db.removeVenueManager(id);
+    return {
+      success: true,
+    };
+  },
 };

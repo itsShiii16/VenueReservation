@@ -189,7 +189,7 @@ export default function VenueCalendarPage() {
         subtitle="Manage and view schedules, bookings, and blocked dates for your venues"
       >
         {selectedVenueId && (
-          <Link to={`/venue-manager/block-schedule?venueId=${selectedVenueId}&date=${formatDateISO(selectedDate)}`}>
+          <Link to={`/vm/block-schedule?venueId=${selectedVenueId}&date=${formatDateISO(selectedDate)}`}>
             <Button variant="danger">Block Time Slots</Button>
           </Link>
         )}
@@ -200,7 +200,7 @@ export default function VenueCalendarPage() {
           title="No Venues Found"
           message="You aren't managing any venues yet. Create a venue to view and manage its calendar schedule."
         >
-          <Link to="/venue-manager/add-venue">
+          <Link to="/vm/venues/add">
             <Button>Add a Venue</Button>
           </Link>
         </EmptyState>
@@ -338,14 +338,21 @@ export default function VenueCalendarPage() {
                       {selectedDayEvents.reservations.map((r) => (
                         <div key={r.id} className="p-3 bg-info/10 border border-info/30 rounded-xl space-y-1">
                           <div className="flex justify-between items-center">
-                            <span className="text-xs font-semibold text-info bg-info/20 px-2 py-0.5 rounded">
-                              RESERVED
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                              r.status === "PENCIL_BOOKED_DRAFT"
+                                ? "text-zinc-600 bg-zinc-100 border border-zinc-300 border-dashed"
+                                : r.status === "BOOKED_CONFIRMED"
+                                ? "text-green-800 bg-green-50"
+                                : "text-info bg-info/20"
+                            }`}>
+                              {r.status === "PENCIL_BOOKED_DRAFT"
+                                ? "PENCIL BOOKED"
+                                : r.status === "BOOKED_CONFIRMED"
+                                ? "BOOKED"
+                                : r.status.replaceAll("_", " ")}
                             </span>
                           </div>
                           <p className="text-sm font-medium text-white">{r.eventTitle}</p>
-                          {r.activityType && (
-                            <p className="text-xs text-gray-300">{r.activityType}</p>
-                          )}
                           <p className="text-xs text-gray-400">
                             {formatDateTime(r.startTime).split(" ")[3] + " " + formatDateTime(r.startTime).split(" ")[4]} - {formatDateTime(r.endTime).split(" ")[3] + " " + formatDateTime(r.endTime).split(" ")[4]}
                           </p>
@@ -358,11 +365,16 @@ export default function VenueCalendarPage() {
                 {/* Quick actions for current day */}
                 <div className="pt-6 border-t border-surface-lighter mt-6 space-y-2">
                   <Link
-                    to={`/venue-manager/block-schedule?venueId=${selectedVenueId}&date=${formatDateISO(selectedDate)}`}
+                    to={`/vm/block-schedule?venueId=${selectedVenueId}&date=${formatDateISO(selectedDate)}`}
                     className="block w-full text-center"
                   >
                     <Button variant="danger" className="w-full">
                       Block Selected Date
+                    </Button>
+                  </Link>
+                  <Link to="/vm/venues" className="block w-full text-center">
+                    <Button variant="secondary" className="w-full">
+                      Add Booking
                     </Button>
                   </Link>
                 </div>

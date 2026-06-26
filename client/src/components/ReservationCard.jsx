@@ -28,6 +28,11 @@ export default function ReservationCard({ reservation, linkPrefix = "/reservatio
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
         <span>Ref: {reservation.referenceNumber}</span>
         <span>{formatDateTime(reservation.startTime)}</span>
+        {reservation.bookingSource === "VENUE_MANAGER_ASSISTED" && (
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+            Venue Manager-Assisted
+          </span>
+        )}
       </div>
     </Link>
   );

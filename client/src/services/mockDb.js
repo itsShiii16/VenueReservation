@@ -71,17 +71,49 @@ const defaultUsers = [
   },
 ];
 
+const SLOT_BLOCKING_STATUSES = ["PENCIL_BOOKED_DRAFT", "PAYMENT_PENDING", "BOOKED_CONFIRMED"];
+const CLOSED_STATUSES = ["REJECTED", "CANCELLED", "EXPIRED_AUTO_REJECTED"];
+
+const hasTimeOverlap = (startA, endA, startB, endB) => {
+  return new Date(startA) < new Date(endB) && new Date(endA) > new Date(startB);
+};
+
+const findScheduleConflict = (venueId, startTime, endTime, excludeReservationId = null) => {
+  const reservationConflict = store.reservations.find((r) => {
+    if (r.id === excludeReservationId || r.venueId !== venueId) return false;
+    if (!SLOT_BLOCKING_STATUSES.includes(r.status)) return false;
+    return hasTimeOverlap(startTime, endTime, r.startTime, r.endTime);
+  });
+
+  if (reservationConflict) return reservationConflict;
+
+  return store.blockedSlots.find((b) => {
+    if (b.venueId !== venueId) return false;
+    return hasTimeOverlap(startTime, endTime, b.startTime, b.endTime);
+  });
+};
+
 // Seed venues with additional config (pencil bookings, requirements)
 const seedVenues = mockVenues.map((v, index) => ({
   ...v,
   createdById: index % 2 === 0 ? "user-manager-1" : "user-manager-2",
-  allowPencilBooking: index % 2 === 0, // Cinematic and Amphitheater allow it
+  allowsPencilBooking: index % 2 === 0, // Cine Adarna and CS Amphitheater allow it
+  allowPencilBooking: index % 2 === 0,
+  preliminaryRequirements: ["Letter of Intent / Request", "Activity summary"],
+  supplementaryRequirements: [
+    "Letter of Intent / Request",
+    "Activity flow / Event Program",
+    "Endorsement from Dean / Adviser",
+    "Equipment checklist",
+  ],
   requirements: [
     "Letter of Intent / Request",
     "Activity flow / Event Program",
     "Endorsement from Dean / Adviser",
     "Equipment checklist",
   ],
+  pencilBookingDays: 3,
+  paymentDeadlineDays: 5,
 }));
 
 // Default Blocked Slots
@@ -96,7 +128,7 @@ const defaultBlockedSlots = [
   },
 ];
 
-// Default VM Access Requests
+// Historical external manager-creation records for admin audit views.
 const defaultRequests = [
   {
     id: "request-1",
@@ -105,7 +137,7 @@ const defaultRequests = [
     facilityToManage: "NIP Auditorium",
     reason: "Need to manage bookings for NIP colloquiums and external rentals.",
     supportingDocumentUrl: "nip_endorsement.pdf",
-    status: "PENDING_REVIEW",
+    status: "CREATED_EXTERNALLY",
     remarks: null,
     clientId: "user-client-2",
     createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -115,17 +147,23 @@ const defaultRequests = [
 // Seed reservations with requirement tracking & payment details
 const seedReservations = mockReservations.map((r) => {
   const matchingVenue = seedVenues.find((v) => v.id === r.venue.id) || seedVenues[0];
+  const paymentStatus =
+    r.status === "BOOKED_CONFIRMED" ? "Paid" :
+    r.status === "PAYMENT_PENDING" ? "Pending" :
+    r.status === "PAYMENT_OVERDUE" ? "Overdue" :
+    "None";
   return {
     ...r,
-    clientId: r.id === "res-1" ? "user-client-1" : "user-client-2",
+    clientId: ["res-1", "res-2"].includes(r.id) ? "user-client-1" : "user-client-2",
     venueId: r.venue.id,
-    paymentStatus: r.status === "APPROVED" ? "Paid" : r.status === "DECLINED" ? "None" : "Pending",
+    paymentStatus,
+    bookingSource: "CLIENT_SUBMITTED",
     requirements: matchingVenue.requirements.map((req, idx) => ({
       id: `req-${idx}`,
       name: req,
-      status: r.status === "APPROVED" ? "Approved" : "Missing",
+      status: ["BOOKED_CONFIRMED", "PAYMENT_PENDING"].includes(r.status) ? "Approved" : "Missing",
       remarks: "",
-      fileName: r.status === "APPROVED" ? "approved_document.pdf" : null,
+      fileName: ["BOOKED_CONFIRMED", "PAYMENT_PENDING"].includes(r.status) ? "approved_document.pdf" : null,
     })),
   };
 });
@@ -211,7 +249,7 @@ export const db = {
     // Include future blocked slots and approved reservations dynamically
     const now = new Date();
     const venueBlocked = store.blockedSlots.filter((b) => b.venueId === id && new Date(b.endTime) >= now);
-    const venueRes = store.reservations.filter((r) => r.venueId === id && r.status === "APPROVED" && new Date(r.endTime) >= now);
+    const venueRes = store.reservations.filter((r) => r.venueId === id && !CLOSED_STATUSES.includes(r.status) && new Date(r.endTime) >= now);
     
     return {
       ...venue,
@@ -277,39 +315,34 @@ export const db = {
     const start = new Date(data.startTime);
     const end = new Date(data.endTime);
     
-    const hasConflict = store.reservations.some((r) => {
-      if (r.venueId !== data.venueId || r.status === "DECLINED" || r.status === "CANCELLED") return false;
-      const rStart = new Date(r.startTime);
-      const rEnd = new Date(r.endTime);
-      return start < rEnd && end > rStart;
-    }) || store.blockedSlots.some((b) => {
-      if (b.venueId !== data.venueId) return false;
-      const bStart = new Date(b.startTime);
-      const bEnd = new Date(b.endTime);
-      return start < bEnd && end > bStart;
-    });
+    const hasConflict = findScheduleConflict(data.venueId, start, end);
 
     if (hasConflict) {
       throw new Error("Schedule conflict detected: Slot is already reserved or blocked.");
     }
 
     const ref = generateRefNumber();
-    const isPencil = data.pencilBooking === "true" || data.pencilBooking === true;
+    const usesPreliminaryFlow = venue.allowsPencilBooking || venue.allowPencilBooking;
+    const submittedAt = new Date().toISOString();
     
     const newRes = {
       id: `res-${generateId()}`,
       referenceNumber: ref,
       eventTitle: data.eventTitle,
-      activityType: data.activityType,
+      activityType: data.activityType || "See submitted requirements",
       expectedAttendees: parseInt(data.expectedAttendees) || 0,
       startTime: data.startTime,
       endTime: data.endTime,
       notes: data.notes || "",
-      status: isPencil ? "DRAFT" : "SUBMITTED",
+      status: usesPreliminaryFlow ? "PRELIMINARY_SUBMITTED" : "UNDER_REVIEW",
       declineReason: null,
       clientId: store.currentUser?.id || "user-client-1",
       venueId: data.venueId,
       paymentStatus: "None",
+      bookingSource: "CLIENT_SUBMITTED",
+      submittedAt,
+      pencilBookingDeadline: null,
+      paymentDeadline: null,
       requirements: venue.requirements.map((req, idx) => ({
         id: `req-${idx}`,
         name: req,
@@ -331,6 +364,10 @@ export const db = {
     if (!venue) throw new Error("Venue not found.");
 
     const ref = generateRefNumber();
+    const conflict = findScheduleConflict(data.venueId, data.startTime, data.endTime);
+    if (conflict) {
+      throw new Error("Schedule conflict detected: Slot is already reserved, pencil booked, payment pending, or blocked.");
+    }
     
     // Find or create mock client
     let client = store.users.find((u) => u.email === data.clientEmail);
@@ -342,7 +379,7 @@ export const db = {
         email: data.clientEmail,
         password: "password123",
         role: "CLIENT",
-        organization: data.clientOrganization || "External Group",
+        organization: "",
       };
       store.users.push(client);
     }
@@ -351,16 +388,17 @@ export const db = {
       id: `res-${generateId()}`,
       referenceNumber: ref,
       eventTitle: data.eventTitle,
-      activityType: data.activityType,
+      activityType: data.activityType || "See submitted requirements",
       expectedAttendees: parseInt(data.expectedAttendees) || 0,
       startTime: data.startTime,
       endTime: data.endTime,
       notes: "Assisted Booking created by Venue Manager. Pre-approved.",
-      status: "APPROVED", // Directly approved
+      status: data.isPaid ? "BOOKED_CONFIRMED" : "PAYMENT_PENDING",
       declineReason: null,
       clientId: client.id,
       venueId: data.venueId,
       paymentStatus: data.isPaid ? "Paid" : "Pending",
+      bookingSource: "VENUE_MANAGER_ASSISTED",
       requirements: venue.requirements.map((req, idx) => ({
         id: `req-${idx}`,
         name: req,
@@ -382,12 +420,54 @@ export const db = {
   },
 
   approveReservation: (id) => {
-    store.reservations = store.reservations.map((r) => (r.id === id ? { ...r, status: "APPROVED", paymentStatus: "Paid" } : r));
+    store.reservations = store.reservations.map((r) => (r.id === id ? { ...r, status: "BOOKED_CONFIRMED", paymentStatus: "Paid" } : r));
     notify();
   },
 
   declineReservation: (id, declineReason) => {
-    store.reservations = store.reservations.map((r) => (r.id === id ? { ...r, status: "DECLINED", declineReason } : r));
+    store.reservations = store.reservations.map((r) => (r.id === id ? { ...r, status: "REJECTED", declineReason } : r));
+    notify();
+  },
+
+  acceptPencilBooking: (id) => {
+    const reservation = store.reservations.find((r) => r.id === id);
+    if (!reservation) throw new Error("Reservation not found.");
+    if (reservation.status !== "PRELIMINARY_SUBMITTED") {
+      throw new Error("Only preliminary submissions can be accepted for pencil booking.");
+    }
+
+    const conflict = findScheduleConflict(reservation.venueId, reservation.startTime, reservation.endTime, id);
+    if (conflict) throw new Error("This slot is no longer available.");
+
+    const deadline = new Date();
+    const venue = store.venues.find((v) => v.id === reservation.venueId);
+    deadline.setDate(deadline.getDate() + (venue?.pencilBookingDays || 3));
+
+    store.reservations = store.reservations.map((r) => {
+      const sameSlot =
+        r.id !== id &&
+        r.venueId === reservation.venueId &&
+        r.status === "PRELIMINARY_SUBMITTED" &&
+        hasTimeOverlap(reservation.startTime, reservation.endTime, r.startTime, r.endTime);
+
+      if (r.id === id) {
+        return {
+          ...r,
+          status: "PENCIL_BOOKED_DRAFT",
+          pencilBookingDeadline: deadline.toISOString(),
+        };
+      }
+
+      if (sameSlot) {
+        return {
+          ...r,
+          status: "REJECTED",
+          declineReason: "Another preliminary request was accepted for this slot.",
+        };
+      }
+
+      return r;
+    });
     notify();
   },
 
@@ -410,10 +490,10 @@ export const db = {
 
       // Automatically advance status if all documents are uploaded/approved
       let nextStatus = r.status;
-      if (r.status === "DRAFT" && updatedReqs.every((req) => req.status !== "Missing")) {
-        nextStatus = "SUBMITTED"; // Pencil Booking upgraded to Submitted
-      } else if (r.status === "SUBMITTED" && updatedReqs.every((req) => req.status === "Approved")) {
+      if (r.status === "PENCIL_BOOKED_DRAFT" && updatedReqs.every((req) => req.status !== "Missing")) {
         nextStatus = "UNDER_REVIEW";
+      } else if (status === "Needs Revision") {
+        nextStatus = "RETURNED_FOR_COMPLETION";
       }
 
       return {
@@ -432,9 +512,11 @@ export const db = {
       
       let finalStatus = r.status;
       if (paymentStatus === "Paid") {
-        finalStatus = "APPROVED";
+        finalStatus = "BOOKED_CONFIRMED";
       } else if (paymentStatus === "Pending") {
-        finalStatus = "UNDER_REVIEW"; // transition to payment pending
+        finalStatus = "PAYMENT_PENDING";
+      } else if (paymentStatus === "Overdue") {
+        finalStatus = "PAYMENT_OVERDUE";
       }
       
       return {
@@ -498,6 +580,41 @@ export const db = {
 
   rejectVMRequest: (id, remarks) => {
     store.requests = store.requests.map((r) => (r.id === id ? { ...r, status: "REJECTED", remarks } : r));
+    notify();
+  },
+
+  createVenueManager: (data) => {
+    if (store.users.some((u) => u.email === data.email)) {
+      throw new Error("Email already exists.");
+    }
+
+    const manager = {
+      id: `user-${generateId()}`,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      password: data.password || "password123",
+      role: "VENUE_MANAGER",
+      organization: "",
+      position: data.position || "Venue Manager",
+      managingUnit: data.managingUnit || "",
+      assignedLocation: data.assignedLocation || "",
+      createdAt: new Date().toISOString(),
+    };
+
+    store.users.push(manager);
+    notify();
+    return manager;
+  },
+
+  updateVenueManager: (id, data) => {
+    store.users = store.users.map((u) => (u.id === id && u.role === "VENUE_MANAGER" ? { ...u, ...data } : u));
+    notify();
+    return store.users.find((u) => u.id === id);
+  },
+
+  removeVenueManager: (id) => {
+    store.users = store.users.map((u) => (u.id === id && u.role === "VENUE_MANAGER" ? { ...u, role: "CLIENT" } : u));
     notify();
   },
 };

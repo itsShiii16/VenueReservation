@@ -12,17 +12,6 @@ import Textarea from "../../components/Textarea";
 import Button from "../../components/Button";
 import PageHeader from "../../components/PageHeader";
 
-const activityTypes = [
-  { value: "Academic Assembly", label: "Academic Assembly" },
-  { value: "Cultural Event", label: "Cultural Event" },
-  { value: "Academic Defense", label: "Academic Defense" },
-  { value: "Seminar", label: "Seminar" },
-  { value: "Workshop", label: "Workshop" },
-  { value: "Meeting", label: "Meeting" },
-  { value: "Organization Event", label: "Organization Event" },
-  { value: "Other", label: "Other" },
-];
-
 export default function ReservationFormPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -35,12 +24,10 @@ export default function ReservationFormPage() {
   const [formData, setFormData] = useState({
     venueId: prefilledVenueId,
     eventTitle: "",
-    activityType: "",
     expectedAttendees: "",
     startTime: prefilledDate ? `${prefilledDate}T08:00` : "",
     endTime: prefilledDate ? `${prefilledDate}T17:00` : "",
     notes: "",
-    pencilBooking: false,
   });
 
   const selectedVenue = venues.find((v) => v.id === formData.venueId);
@@ -97,8 +84,6 @@ export default function ReservationFormPage() {
 
         <Input id="eventTitle" label="Event Title" name="eventTitle" placeholder="e.g., CS Department Assembly" value={formData.eventTitle} onChange={handleChange} required />
 
-        <Select id="activityType" label="Activity Type" name="activityType" value={formData.activityType} onChange={handleChange} options={activityTypes} required />
-
         <Input id="expectedAttendees" label="Expected Attendees" name="expectedAttendees" type="number" min="1" placeholder="e.g., 50" value={formData.expectedAttendees} onChange={handleChange} required />
 
         <div className="grid grid-cols-2 gap-4">
@@ -108,26 +93,25 @@ export default function ReservationFormPage() {
 
         <Textarea id="notes" label="Additional Notes (optional)" name="notes" placeholder="Any special requests or requirements..." value={formData.notes} onChange={handleChange} rows={3} />
 
-        {selectedVenue?.allowPencilBooking && (
-          <div className="flex items-start gap-3 p-4 bg-red-900/10 border border-red-800/30 rounded-xl">
-            <input
-              type="checkbox"
-              id="pencilBooking"
-              name="pencilBooking"
-              checked={formData.pencilBooking}
-              onChange={(e) => setFormData({ ...formData, pencilBooking: e.target.checked })}
-              className="mt-1 h-4 w-4 accent-red-800 text-red-800 focus:ring-red-800 border-zinc-300 rounded"
-            />
-            <label htmlFor="pencilBooking" className="text-sm text-zinc-300 font-medium cursor-pointer">
-              <span className="block text-white font-semibold mb-0.5">Pencil Book this slot (Draft Status)</span>
-              This venue allows Pencil Bookings. Check this to hold this slot as a Draft. You will have 3 days to upload the required documents.
-            </label>
+        {(selectedVenue?.allowsPencilBooking || selectedVenue?.allowPencilBooking) && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-zinc-700">
+            <span className="block text-zinc-900 font-semibold mb-1">Preliminary requirement flow</span>
+            This venue allows pencil booking, but submitting this form will not hold the slot yet.
+            The Venue Manager reviews all preliminary submissions for the same slot and accepts one
+            request for pencil booking.
+          </div>
+        )}
+
+        {selectedVenue && !(selectedVenue.allowsPencilBooking || selectedVenue.allowPencilBooking) && (
+          <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl text-sm text-zinc-700">
+            <span className="block text-zinc-900 font-semibold mb-1">Full reservation flow</span>
+            This venue does not use pencil booking. Submit all requirements at once for manager review.
           </div>
         )}
 
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="ghost" type="button" onClick={() => navigate(-1)}>Cancel</Button>
-          <Button type="submit" loading={loading}>Submit Reservation</Button>
+          <Button type="submit" loading={loading}>Submit Requirements</Button>
         </div>
       </form>
     </div>

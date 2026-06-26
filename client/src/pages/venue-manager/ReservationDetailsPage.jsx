@@ -55,11 +55,11 @@ export default function ReservationDetailsPage() {
   const handleApproveOverall = async () => {
     setActionLoading(true);
     try {
-      await reservationService.approve(id);
-      toast.success("Reservation request fully approved!");
+      await reservationService.acceptPencilBooking(id);
+      toast.success("Pencil booking accepted. Competing preliminary requests for this slot were closed.");
       fetchReservation();
     } catch (err) {
-      toast.error("Failed to approve reservation.");
+      toast.error(err.message || "Failed to accept pencil booking.");
     } finally {
       setActionLoading(false);
     }
@@ -70,7 +70,7 @@ export default function ReservationDetailsPage() {
     setActionLoading(true);
     try {
       await reservationService.decline(id, { declineReason });
-      toast.success("Reservation request declined.");
+      toast.success("Reservation request rejected.");
       navigate("/vm/reservations");
     } catch (err) {
       toast.error("Failed to decline reservation.");
@@ -141,9 +141,10 @@ export default function ReservationDetailsPage() {
   if (loading) return <LoadingState message="Loading reservation details..." />;
   if (!reservation) return <div className="text-center py-16 text-zinc-500">Reservation not found.</div>;
 
-  const canActOverall = ["SUBMITTED", "UNDER_REVIEW"].includes(reservation.status);
+  const canAcceptPencil = reservation.status === "PRELIMINARY_SUBMITTED";
+  const canReject = ["PRELIMINARY_SUBMITTED", "UNDER_REVIEW", "RETURNED_FOR_COMPLETION"].includes(reservation.status);
   const allDocsApproved = reservation.requirements?.every((req) => req.status === "Approved");
-  const isPencilBooking = reservation.status === "DRAFT";
+  const isPencilBooking = reservation.status === "PENCIL_BOOKED_DRAFT";
 
   // Badges color code mapping
   const paymentBadgeColors = {
@@ -192,7 +193,9 @@ export default function ReservationDetailsPage() {
           <div>
             <span className="text-zinc-500 block">Client Info</span>
             <span className="font-semibold text-gray-100">{reservation.client?.firstName} {reservation.client?.lastName}</span>
-            <span className="text-xs text-zinc-400 block mt-0.5">{reservation.client?.organization} ({reservation.client?.position})</span>
+            {reservation.client?.position && (
+              <span className="text-xs text-zinc-400 block mt-0.5">{reservation.client.position}</span>
+            )}
             <span className="text-xs text-zinc-500 block">{reservation.client?.email}</span>
           </div>
         </div>
@@ -211,9 +214,22 @@ export default function ReservationDetailsPage() {
         <div className="bg-zinc-50 border border-zinc-200 text-zinc-800 rounded-2xl p-5 flex gap-4 items-center">
           <Clock className="w-6 h-6 text-zinc-500" />
           <div>
-            <h3 className="font-bold text-gray-900">Pencil Booking Active (Draft Mode)</h3>
-            <p className="text-sm text-zinc-600 mt-0.5">The client is currently gathering and uploading the requested documents. You can review requirements but cannot approve this request fully until it is submitted.</p>
+            <h3 className="font-bold text-gray-900">Pencil Booking Active</h3>
+            <p className="text-sm text-zinc-600 mt-0.5">The slot is temporarily held while the client uploads supplementary requirements before the deadline.</p>
           </div>
+        </div>
+      )}
+
+      {canAcceptPencil && (
+        <div className="bg-surface border border-surface-lighter rounded-2xl p-6 shadow-sm space-y-4">
+          <h2 className="text-lg font-bold text-gray-100">Preliminary Request Review</h2>
+          <p className="text-sm text-zinc-500">
+            Accept this request to start the pencil booking timer. Other preliminary requests for
+            this same venue and time slot will be rejected automatically.
+          </p>
+          <Button onClick={handleApproveOverall} loading={actionLoading}>
+            Accept Pencil Booking
+          </Button>
         </div>
       )}
 
@@ -312,7 +328,7 @@ export default function ReservationDetailsPage() {
       </div>
 
       {/* Payment Action Flow Card */}
-      {allDocsApproved && reservation.status !== "DECLINED" && reservation.status !== "CANCELLED" && (
+      {allDocsApproved && !["REJECTED", "CANCELLED"].includes(reservation.status) && (
         <div className="bg-surface border border-surface-lighter rounded-2xl p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -341,7 +357,7 @@ export default function ReservationDetailsPage() {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button variant="success" onClick={handleMarkAsPaid}>
-                  Confirm Payment & Approve Booking
+                  Mark as Booked
                 </Button>
                 <Button variant="outline" onClick={handleMarkAsOverdue} className="text-red-800 hover:bg-red-50 border-red-800/30">
                   Mark Payment Overdue
@@ -366,7 +382,7 @@ export default function ReservationDetailsPage() {
             <div className="bg-green-50 border border-green-200 text-green-800 p-4 rounded-xl text-sm flex gap-3 items-center">
               <CheckCircle className="w-5 h-5 text-green-600" />
               <div>
-                <span className="font-bold">Booking Active & Fully Paid</span>
+              <span className="font-bold">Booked / Confirmed</span>
                 <p className="text-xs text-green-700 mt-0.5">This schedule is finalized. The venue has been successfully reserved.</p>
               </div>
             </div>
@@ -375,24 +391,24 @@ export default function ReservationDetailsPage() {
       )}
 
       {/* Decline Reservation Panel */}
-      {canActOverall && (
+      {canReject && (
         <div className="bg-surface border border-surface-lighter rounded-2xl p-6 shadow-sm space-y-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-red-800" /> Destructive Actions
           </h2>
-          <p className="text-sm text-zinc-500">Decline this reservation request if the slot is no longer available or details are invalid.</p>
+          <p className="text-sm text-zinc-500">Reject this reservation request if the slot is no longer available or details are invalid.</p>
           
           <div className="max-w-xl space-y-3 pt-2">
             <Textarea
               id="declineReason"
-              label="Decline remarks"
-              placeholder="Explain why this request is being declined..."
+              label="Reject remarks"
+              placeholder="Explain why this request is being rejected..."
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
               rows={2}
             />
             <Button variant="danger" onClick={handleDeclineOverall} disabled={!declineReason.trim()} loading={actionLoading}>
-              Decline Reservation request
+              Reject Request
             </Button>
           </div>
         </div>

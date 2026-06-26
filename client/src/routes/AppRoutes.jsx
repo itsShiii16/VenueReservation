@@ -30,7 +30,6 @@ import NotFoundPage from "../pages/public/NotFoundPage";
 import ReservationFormPage from "../pages/client/ReservationFormPage";
 import MyReservationsPage from "../pages/client/MyReservationsPage";
 import ProfilePage from "../pages/client/ProfilePage";
-import RequestVMAccessPage from "../pages/client/RequestVMAccessPage";
 import ClientReservationDetailsPage from "../pages/client/ClientReservationDetailsPage";
 
 // Venue Manager pages
@@ -45,8 +44,6 @@ import BlockSchedulePage from "../pages/venue-manager/BlockSchedulePage";
 
 // Admin pages
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
-import VMRequestsPage from "../pages/admin/VMRequestsPage";
-import VMRequestDetailsPage from "../pages/admin/VMRequestDetailsPage";
 import ApprovedManagersPage from "../pages/admin/ApprovedManagersPage";
 
 export default function AppRoutes() {
@@ -95,14 +92,6 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/request-vm-access"
-          element={
-            <ProtectedRoute allowedRoles={["CLIENT"]}>
-              <RequestVMAccessPage />
-            </ProtectedRoute>
-          }
-        />
       </Route>
 
       {/* ─── Venue Manager Routes ─── */}
@@ -132,8 +121,6 @@ export default function AppRoutes() {
         }
       >
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/admin/vm-requests" element={<VMRequestsPage />} />
-        <Route path="/admin/vm-requests/:id" element={<VMRequestDetailsPage />} />
         <Route path="/admin/approved-managers" element={<ApprovedManagersPage />} />
       </Route>
 

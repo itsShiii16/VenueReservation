@@ -19,7 +19,7 @@ const { logAudit } = require("../services/auditService");
  */
 const createReservation = async (req, res, next) => {
   try {
-    const { venueId, eventTitle, activityType, expectedAttendees, startTime, endTime, notes } =
+    const { venueId, eventTitle, expectedAttendees, startTime, endTime, notes } =
       req.body;
 
     // Verify venue exists and is active
@@ -31,7 +31,8 @@ const createReservation = async (req, res, next) => {
       });
     }
 
-    // Check for schedule conflicts
+    // Check for schedule conflicts. Preliminary and under-review requests do not block slots;
+    // this service only rejects conflicts with booked, pencil-booked, payment-pending, or blocked slots.
     await ensureNoConflict(venueId, startTime, endTime);
 
     // Generate a unique reference number
@@ -42,12 +43,12 @@ const createReservation = async (req, res, next) => {
       data: {
         referenceNumber,
         eventTitle,
-        activityType,
+        activityType: "See submitted requirements",
         expectedAttendees: parseInt(expectedAttendees),
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         notes,
-        status: "SUBMITTED",
+        status: venue.allowsPencilBooking ? "PRELIMINARY_SUBMITTED" : "UNDER_REVIEW",
         clientId: req.user.id,
         venueId,
       },
@@ -163,8 +164,7 @@ const cancelReservation = async (req, res, next) => {
       });
     }
 
-    // Can only cancel SUBMITTED or UNDER_REVIEW reservations
-    if (!["SUBMITTED", "UNDER_REVIEW"].includes(reservation.status)) {
+    if (!["PRELIMINARY_SUBMITTED", "PENCIL_BOOKED_DRAFT", "UNDER_REVIEW", "RETURNED_FOR_COMPLETION", "PAYMENT_PENDING", "PAYMENT_OVERDUE"].includes(reservation.status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot cancel a reservation with status: ${reservation.status}`,
@@ -228,7 +228,7 @@ const getVenueManagerReservations = async (req, res, next) => {
 
 /**
  * PATCH /api/reservations/:id/approve
- * Approve a reservation (VENUE_MANAGER only)
+ * Mark a reservation as booked / confirmed (VENUE_MANAGER only)
  */
 const approveReservation = async (req, res, next) => {
   try {
@@ -252,7 +252,7 @@ const approveReservation = async (req, res, next) => {
       });
     }
 
-    if (!["SUBMITTED", "UNDER_REVIEW"].includes(reservation.status)) {
+    if (!["PAYMENT_PENDING", "PAYMENT_OVERDUE"].includes(reservation.status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot approve a reservation with status: ${reservation.status}`,
@@ -269,7 +269,7 @@ const approveReservation = async (req, res, next) => {
 
     const updated = await prisma.reservation.update({
       where: { id: req.params.id },
-      data: { status: "APPROVED" },
+      data: { status: "BOOKED_CONFIRMED" },
     });
 
     await logAudit({
@@ -277,7 +277,7 @@ const approveReservation = async (req, res, next) => {
       action: "APPROVE_RESERVATION",
       entityType: "Reservation",
       entityId: updated.id,
-      description: `Approved reservation ${updated.referenceNumber}`,
+      description: `Marked reservation ${updated.referenceNumber} as booked / confirmed`,
     });
 
     res.json({
@@ -317,7 +317,7 @@ const declineReservation = async (req, res, next) => {
       });
     }
 
-    if (!["SUBMITTED", "UNDER_REVIEW"].includes(reservation.status)) {
+    if (!["PRELIMINARY_SUBMITTED", "UNDER_REVIEW", "RETURNED_FOR_COMPLETION"].includes(reservation.status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot decline a reservation with status: ${reservation.status}`,
@@ -326,7 +326,7 @@ const declineReservation = async (req, res, next) => {
 
     const updated = await prisma.reservation.update({
       where: { id: req.params.id },
-      data: { status: "DECLINED", declineReason },
+      data: { status: "REJECTED", declineReason },
     });
 
     await logAudit({

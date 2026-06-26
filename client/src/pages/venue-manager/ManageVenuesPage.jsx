@@ -9,21 +9,9 @@ import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Select from "../../components/Select";
-import Textarea from "../../components/Textarea";
 import LoadingState from "../../components/LoadingState";
 import EmptyState from "../../components/EmptyState";
 import { toast } from "sonner";
-
-const activityTypes = [
-  { value: "Academic Assembly", label: "Academic Assembly" },
-  { value: "Cultural Event", label: "Cultural Event" },
-  { value: "Academic Defense", label: "Academic Defense" },
-  { value: "Seminar", label: "Seminar" },
-  { value: "Workshop", label: "Workshop" },
-  { value: "Meeting", label: "Meeting" },
-  { value: "Organization Event", label: "Organization Event" },
-  { value: "Other", label: "Other" },
-];
 
 export default function ManageVenuesPage() {
   const { user } = useAuth();
@@ -39,9 +27,7 @@ export default function ManageVenuesPage() {
     clientEmail: "",
     clientFirstName: "",
     clientLastName: "",
-    clientOrganization: "",
     eventTitle: "",
-    activityType: "",
     expectedAttendees: "",
     startTime: "",
     endTime: "",
@@ -83,7 +69,7 @@ export default function ManageVenuesPage() {
     setFormLoading(true);
     try {
       await reservationService.createAssisted(formData);
-      toast.success("Assisted Booking created successfully!");
+      toast.success("Booking added successfully.");
       setIsModalOpen(false);
       // Reset form
       setFormData({
@@ -91,9 +77,7 @@ export default function ManageVenuesPage() {
         clientEmail: "",
         clientFirstName: "",
         clientLastName: "",
-        clientOrganization: "",
         eventTitle: "",
-        activityType: "",
         expectedAttendees: "",
         startTime: "",
         endTime: "",
@@ -113,7 +97,7 @@ export default function ManageVenuesPage() {
       <PageHeader title="Manage Venues" subtitle="Venues you are responsible for">
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsModalOpen(true)} disabled={venues.length === 0}>
-            Create Assisted Booking
+            Add Booking
           </Button>
           <Link to="/vm/venues/add">
             <Button>Add Venue</Button>
@@ -138,7 +122,7 @@ export default function ManageVenuesPage() {
       )}
 
       {/* Assisted Booking Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Assisted Booking" size="xl">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Booking" size="xl">
         <form onSubmit={handleCreateAssistedBooking} className="space-y-4">
           <p className="text-xs text-zinc-500">
             Submit a pre-approved reservation on behalf of a client. Document requirements will be auto-approved.
@@ -154,27 +138,16 @@ export default function ManageVenuesPage() {
             required
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              id="assisted-email"
-              label="Client Email"
-              name="clientEmail"
-              type="email"
-              placeholder="e.g. adviser@up.edu.ph"
-              value={formData.clientEmail}
-              onChange={handleInputChange}
-              required
-            />
-            <Input
-              id="assisted-org"
-              label="Client Organization / Dept"
-              name="clientOrganization"
-              placeholder="e.g. Dept of Physics"
-              value={formData.clientOrganization}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
+          <Input
+            id="assisted-email"
+            label="Client Email"
+            name="clientEmail"
+            type="email"
+            placeholder="e.g. requester@up.edu.ph"
+            value={formData.clientEmail}
+            onChange={handleInputChange}
+            required
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -197,26 +170,15 @@ export default function ManageVenuesPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              id="assisted-title"
-              label="Event Title"
-              name="eventTitle"
-              placeholder="e.g. Guest Lecture"
-              value={formData.eventTitle}
-              onChange={handleInputChange}
-              required
-            />
-            <Select
-              id="assisted-activity"
-              label="Activity Type"
-              name="activityType"
-              value={formData.activityType}
-              onChange={handleInputChange}
-              options={activityTypes}
-              required
-            />
-          </div>
+          <Input
+            id="assisted-title"
+            label="Event Title"
+            name="eventTitle"
+            placeholder="e.g. Guest Lecture"
+            value={formData.eventTitle}
+            onChange={handleInputChange}
+            required
+          />
 
           <div className="grid grid-cols-3 gap-4">
             <Input
@@ -259,7 +221,7 @@ export default function ManageVenuesPage() {
               className="h-4 w-4 accent-red-800 text-red-800 border-zinc-300 rounded"
             />
             <label htmlFor="assisted-paid" className="text-sm text-zinc-600 font-semibold cursor-pointer">
-              Mark Booking Fee as PAID
+              Mark payment as paid
             </label>
           </div>
 
@@ -268,7 +230,7 @@ export default function ManageVenuesPage() {
               Cancel
             </Button>
             <Button type="submit" loading={formLoading}>
-              Confirm & Book Slot
+              Add Booking
             </Button>
           </div>
         </form>
