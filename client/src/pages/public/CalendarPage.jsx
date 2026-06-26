@@ -206,14 +206,18 @@ export default function CalendarPage() {
 
     // 3. Check if reserved
     const hasReservation = (venueDetails.reservations || []).some((r) => {
-      const rStart = new Date(r.startTime);
-      const rEnd = new Date(r.endTime);
+      const checkOverlap = (startTime, endTime) => {
+        const rStart = new Date(startTime);
+        const rEnd = new Date(endTime);
+        const rDay = new Date(rStart.getFullYear(), rStart.getMonth(), rStart.getDate());
+        if (slotDate.getTime() !== rDay.getTime()) return false;
+        return block.startHour < rEnd.getUTCHours() + 8 && block.endHour > rStart.getUTCHours() + 8;
+      };
 
-      const rDay = new Date(rStart.getFullYear(), rStart.getMonth(), rStart.getDate());
-      if (slotDate.getTime() !== rDay.getTime()) return false;
-
-      // Check hour overlap
-      return block.startHour < rEnd.getUTCHours() + 8 && block.endHour > rStart.getUTCHours() + 8;
+      if (r.slots && Array.isArray(r.slots) && r.slots.length > 0) {
+        return r.slots.some(slot => checkOverlap(slot.startTime, slot.endTime));
+      }
+      return checkOverlap(r.startTime, r.endTime);
     });
     if (hasReservation) return "reserved";
 

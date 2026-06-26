@@ -282,7 +282,23 @@ export default function VenueCalendarPage() {
   const getDayEvents = (date) => {
     if (!date || !venueDetails) return { reservations: [], blockedSlots: [] };
 
-    const reservations = (venueDetails.reservations || []).filter((r) => {
+    const allReservations = [];
+    (venueDetails.reservations || []).forEach((r) => {
+      if (r.slots && Array.isArray(r.slots) && r.slots.length > 0) {
+        r.slots.forEach((slot, idx) => {
+          allReservations.push({
+            ...r,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            slotIndex: idx,
+          });
+        });
+      } else {
+        allReservations.push(r);
+      }
+    });
+
+    const reservations = allReservations.filter((r) => {
       const rStart = new Date(r.startTime);
       const rEnd = new Date(r.endTime);
       const dStart = new Date(rStart.getFullYear(), rStart.getMonth(), rStart.getDate());

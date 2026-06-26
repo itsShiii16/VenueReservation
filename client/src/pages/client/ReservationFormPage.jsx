@@ -11,6 +11,7 @@ import Select from "../../components/Select";
 import Textarea from "../../components/Textarea";
 import Button from "../../components/Button";
 import PageHeader from "../../components/PageHeader";
+import { Plus, Trash2 } from "lucide-react";
 
 export default function ReservationFormPage() {
   const [searchParams] = useSearchParams();
@@ -25,10 +26,32 @@ export default function ReservationFormPage() {
     venueId: prefilledVenueId,
     eventTitle: "",
     expectedAttendees: "",
-    startTime: prefilledDate ? `${prefilledDate}T08:00` : "",
-    endTime: prefilledDate ? `${prefilledDate}T17:00` : "",
     notes: "",
   });
+
+  const [slots, setSlots] = useState([
+    {
+      startTime: prefilledDate ? `${prefilledDate}T08:00` : "",
+      endTime: prefilledDate ? `${prefilledDate}T17:00` : "",
+    }
+  ]);
+
+  const handleSlotChange = (index, field, value) => {
+    setSlots((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const addSlot = () => {
+    setSlots((prev) => [...prev, { startTime: "", endTime: "" }]);
+  };
+
+  const removeSlot = (index) => {
+    if (slots.length <= 1) return;
+    setSlots((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const selectedVenue = venues.find((v) => v.id === formData.venueId);
 
@@ -45,7 +68,12 @@ export default function ReservationFormPage() {
     setError("");
     setLoading(true);
     try {
-      await reservationService.create(formData);
+      await reservationService.create({
+        ...formData,
+        startTime: slots[0].startTime,
+        endTime: slots[0].endTime,
+        slots,
+      });
       navigate("/my-reservations");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit reservation.");
@@ -86,9 +114,53 @@ export default function ReservationFormPage() {
 
         <Input id="expectedAttendees" label="Expected Attendees" name="expectedAttendees" type="number" min="1" placeholder="e.g., 50" value={formData.expectedAttendees} onChange={handleChange} required />
 
-        <div className="grid grid-cols-2 gap-4">
-          <Input id="startTime" label="Start Date & Time" name="startTime" type="datetime-local" value={formData.startTime} onChange={handleChange} required />
-          <Input id="endTime" label="End Date & Time" name="endTime" type="datetime-local" value={formData.endTime} onChange={handleChange} required />
+        <div className="space-y-4 border-t border-surface-lighter pt-4">
+          <label className="block text-sm font-semibold text-gray-400">Date & Time Slot(s)</label>
+          
+          <div className="space-y-3">
+            {slots.map((slot, index) => (
+              <div key={index} className="flex gap-4 items-end bg-surface-light border border-surface-lighter p-4 rounded-xl relative">
+                <div className="flex-1 grid grid-cols-2 gap-4">
+                  <Input
+                    id={`startTime-${index}`}
+                    label="Start Date & Time"
+                    name="startTime"
+                    type="datetime-local"
+                    value={slot.startTime}
+                    onChange={(e) => handleSlotChange(index, "startTime", e.target.value)}
+                    required
+                  />
+                  <Input
+                    id={`endTime-${index}`}
+                    label="End Date & Time"
+                    name="endTime"
+                    type="datetime-local"
+                    value={slot.endTime}
+                    onChange={(e) => handleSlotChange(index, "endTime", e.target.value)}
+                    required
+                  />
+                </div>
+                {slots.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeSlot(index)}
+                    className="mb-2 p-2.5 text-danger hover:bg-danger/10 hover:text-danger rounded-lg transition-colors border border-dashed border-danger/25"
+                    title="Remove Slot"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={addSlot}
+            className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary-dark transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add another date & time
+          </button>
         </div>
 
         <Textarea id="notes" label="Additional Notes (optional)" name="notes" placeholder="Any special requests or requirements..." value={formData.notes} onChange={handleChange} rows={3} />

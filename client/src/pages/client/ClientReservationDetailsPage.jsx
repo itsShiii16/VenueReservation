@@ -130,10 +130,29 @@ export default function ClientReservationDetailsPage() {
           </div>
           <div>
             <span className="text-zinc-500 block">Date & Time</span>
-            <span className="font-semibold text-gray-100">{formatDateTime(reservation.startTime).split(" ").slice(0, 3).join(" ")}</span>
-            <span className="text-xs text-zinc-400 block mt-0.5">
-              {formatDateTime(reservation.startTime).split(" ")[3] + " " + formatDateTime(reservation.startTime).split(" ")[4]} - {formatDateTime(reservation.endTime).split(" ")[3] + " " + formatDateTime(reservation.endTime).split(" ")[4]}
-            </span>
+            {reservation.slots && Array.isArray(reservation.slots) && reservation.slots.length > 0 ? (
+              <div className="space-y-1.5 mt-1">
+                {reservation.slots.map((slot, idx) => {
+                  const sD = formatDateTime(slot.startTime);
+                  const eD = formatDateTime(slot.endTime);
+                  const dateStr = sD.split(" ").slice(0, 3).join(" ");
+                  const timeStr = `${sD.split(" ")[3]} ${sD.split(" ")[4]} - ${eD.split(" ")[3]} ${eD.split(" ")[4]}`;
+                  return (
+                    <div key={idx} className="border-l-2 border-primary/30 pl-2">
+                      <span className="font-semibold text-gray-100 block text-xs">{dateStr}</span>
+                      <span className="text-zinc-400 block text-[11px]">{timeStr}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <>
+                <span className="font-semibold text-gray-100">{formatDateTime(reservation.startTime).split(" ").slice(0, 3).join(" ")}</span>
+                <span className="text-xs text-zinc-400 block mt-0.5">
+                  {formatDateTime(reservation.startTime).split(" ")[3] + " " + formatDateTime(reservation.startTime).split(" ")[4]} - {formatDateTime(reservation.endTime).split(" ")[3] + " " + formatDateTime(reservation.endTime).split(" ")[4]}
+                </span>
+              </>
+            )}
           </div>
           <div>
             <span className="text-zinc-500 block">Expected Attendees</span>

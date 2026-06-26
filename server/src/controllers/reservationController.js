@@ -19,7 +19,7 @@ const { logAudit } = require("../services/auditService");
  */
 const createReservation = async (req, res, next) => {
   try {
-    const { venueId, eventTitle, expectedAttendees, startTime, endTime, notes } =
+    const { venueId, eventTitle, expectedAttendees, startTime, endTime, notes, slots } =
       req.body;
 
     // Verify venue exists and is active
@@ -31,9 +31,24 @@ const createReservation = async (req, res, next) => {
       });
     }
 
-    // Check for schedule conflicts. Preliminary and under-review requests do not block slots;
-    // this service only rejects conflicts with booked, pencil-booked, payment-pending, or blocked slots.
-    await ensureNoConflict(venueId, startTime, endTime);
+    // Resolve slots array
+    let bookingSlots = [];
+    if (slots && Array.isArray(slots) && slots.length > 0) {
+      bookingSlots = slots.map((s) => ({
+        startTime: new Date(s.startTime),
+        endTime: new Date(s.endTime),
+      }));
+    } else {
+      bookingSlots = [{
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+      }];
+    }
+
+    // Check conflicts for each slot
+    for (const slot of bookingSlots) {
+      await ensureNoConflict(venueId, slot.startTime, slot.endTime);
+    }
 
     // Generate a unique reference number
     const referenceNumber = generateReferenceNumber();
@@ -45,12 +60,13 @@ const createReservation = async (req, res, next) => {
         eventTitle,
         activityType: "See submitted requirements",
         expectedAttendees: parseInt(expectedAttendees),
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
+        startTime: bookingSlots[0].startTime,
+        endTime: bookingSlots[0].endTime,
         notes,
         status: venue.allowsPencilBooking ? "PRELIMINARY_SUBMITTED" : "UNDER_REVIEW",
         clientId: req.user.id,
         venueId,
+        slots: bookingSlots,
       },
       include: {
         venue: { select: { id: true, name: true } },

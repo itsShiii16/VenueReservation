@@ -46,6 +46,11 @@ const createReservationRules = [
   body("notes")
     .optional()
     .trim(),
+
+  body("slots")
+    .optional()
+    .isArray()
+    .withMessage("Slots must be an array of date-time objects."),
 ];
 
 const declineReservationRules = [
