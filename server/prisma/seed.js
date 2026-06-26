@@ -311,7 +311,54 @@ async function main() {
       venueId: venue4.id,
     },
   });
-  console.log("  ✓ Created 3 Reservations (APPROVED, SUBMITTED, DECLINED)");
+
+  // ───────────── Specific July 2026 Screenshot Events ─────────────
+  await prisma.reservation.create({
+    data: {
+      referenceNumber: "RES-20260628-0001",
+      eventTitle: "Org General Assembly",
+      activityType: "General Assembly",
+      expectedAttendees: 100,
+      startTime: new Date("2026-06-28T13:00:00+08:00"),
+      endTime: new Date("2026-06-28T17:00:00+08:00"),
+      status: "PAYMENT_PENDING",
+      bookingSource: "CLIENT_SUBMITTED",
+      clientId: client1.id,
+      venueId: venue1.id,
+    },
+  });
+
+  await prisma.reservation.create({
+    data: {
+      referenceNumber: "RES-20260702-0001",
+      eventTitle: "Physics Seminar Series",
+      activityType: "Seminar",
+      expectedAttendees: 50,
+      startTime: new Date("2026-07-02T09:00:00+08:00"),
+      endTime: new Date("2026-07-02T12:00:00+08:00"),
+      status: "PRELIMINARY_SUBMITTED",
+      bookingSource: "CLIENT_SUBMITTED",
+      clientId: client2.id,
+      venueId: venue1.id,
+    },
+  });
+
+  await prisma.reservation.create({
+    data: {
+      referenceNumber: "RES-20260715-0001",
+      eventTitle: "UP Film Festival 2026",
+      activityType: "Festival",
+      expectedAttendees: 500,
+      startTime: new Date("2026-07-15T08:00:00+08:00"),
+      endTime: new Date("2026-07-15T17:00:00+08:00"),
+      status: "BOOKED_CONFIRMED",
+      bookingSource: "CLIENT_SUBMITTED",
+      clientId: client1.id,
+      venueId: venue1.id,
+    },
+  });
+
+  console.log("  ✓ Created 3 specific July 2026 Reservations for Cine Adarna");
 
   // ───────────── Create Blocked Slots ─────────────
 
@@ -334,7 +381,19 @@ async function main() {
       createdById: manager1.id,
     },
   });
-  console.log("  ✓ Created 2 Blocked Slots");
+
+  // July 20, 2026 Blocked Slot for Maintenance
+  await prisma.blockedSlot.create({
+    data: {
+      startTime: new Date("2026-07-20T08:00:00+08:00"),
+      endTime: new Date("2026-07-20T17:00:00+08:00"),
+      reason: "Maintenance",
+      venueId: venue1.id,
+      createdById: manager1.id,
+    },
+  });
+
+  console.log("  ✓ Created 3 Blocked Slots including July 20 Maintenance");
 
   // ───────────── Create Venue Manager Requests ─────────────
 

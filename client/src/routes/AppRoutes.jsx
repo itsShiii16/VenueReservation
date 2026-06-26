@@ -40,7 +40,6 @@ import EditVenuePage from "../pages/venue-manager/EditVenuePage";
 import ReservationRequestsPage from "../pages/venue-manager/ReservationRequestsPage";
 import ReservationDetailsPage from "../pages/venue-manager/ReservationDetailsPage";
 import VenueCalendarPage from "../pages/venue-manager/VenueCalendarPage";
-import BlockSchedulePage from "../pages/venue-manager/BlockSchedulePage";
 
 // Admin pages
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
@@ -116,7 +115,6 @@ export default function AppRoutes() {
         <Route path="/vm/reservations" element={<ReservationRequestsPage />} />
         <Route path="/vm/reservations/:id" element={<ReservationDetailsPage />} />
         <Route path="/vm/calendar" element={<VenueCalendarPage />} />
-        <Route path="/vm/block-schedule" element={<BlockSchedulePage />} />
       </Route>
 
       {/* ─── System Admin Routes ─── */}
