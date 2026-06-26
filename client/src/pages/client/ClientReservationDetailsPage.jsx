@@ -195,7 +195,7 @@ export default function ClientReservationDetailsPage() {
       {/* Requirement Tracking section */}
       <div className="bg-surface border border-surface-lighter rounded-2xl p-6 shadow-sm space-y-6">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
             <FileText className="w-5 h-5 text-red-800" /> Requirement Checklist
           </h2>
           <p className="text-sm text-zinc-500 mt-1">Upload the required documents to progress your reservation request.</p>

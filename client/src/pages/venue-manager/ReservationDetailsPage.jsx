@@ -236,7 +236,7 @@ export default function ReservationDetailsPage() {
       {/* Document Checklist & Validation Panel */}
       <div className="bg-surface border border-surface-lighter rounded-2xl p-6 shadow-sm space-y-6">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-red-800" /> Document Verification
           </h2>
           <p className="text-sm text-zinc-500 mt-1">Review the files submitted by the client and validate them.</p>
@@ -331,7 +331,7 @@ export default function ReservationDetailsPage() {
       {allDocsApproved && !["REJECTED", "CANCELLED"].includes(reservation.status) && (
         <div className="bg-surface border border-surface-lighter rounded-2xl p-6 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-red-800" /> Payment & Booking Confirmation
             </h2>
             <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${paymentBadgeColors[reservation.paymentStatus]}`}>
@@ -393,7 +393,7 @@ export default function ReservationDetailsPage() {
       {/* Decline Reservation Panel */}
       {canReject && (
         <div className="bg-surface border border-surface-lighter rounded-2xl p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg font-bold text-gray-100 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-red-800" /> Destructive Actions
           </h2>
           <p className="text-sm text-zinc-500">Reject this reservation request if the slot is no longer available or details are invalid.</p>

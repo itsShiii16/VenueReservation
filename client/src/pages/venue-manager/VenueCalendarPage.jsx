@@ -635,7 +635,7 @@ export default function VenueCalendarPage() {
           {isBatchMode && (
             <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-200">
               <div>
-                <h4 className="font-bold text-white text-base">Batch Configuration Mode Active</h4>
+                <h4 className="font-bold text-primary text-base">Batch Configuration Mode Active</h4>
                 <p className="text-sm text-gray-300">
                   Select dates below. Currently selected:{" "}
                   <strong className="text-primary font-bold text-lg">{selectedDates.size}</strong> date(s).
@@ -1288,7 +1288,7 @@ export default function VenueCalendarPage() {
                 onChange={handleBatchFormChange}
                 className="w-4 h-4 rounded text-primary focus:ring-primary/40 border-surface-lighter"
               />
-              <label htmlFor="clearOverrides" className="text-sm font-semibold text-white cursor-pointer">
+              <label htmlFor="clearOverrides" className="text-sm font-semibold text-gray-100 cursor-pointer">
                 Reset to default venue rates and schedules
               </label>
             </div>
@@ -1307,7 +1307,7 @@ export default function VenueCalendarPage() {
                     onChange={handleBatchFormChange}
                     className="w-4 h-4 rounded text-primary focus:ring-primary/40 border-surface-lighter"
                   />
-                  <label htmlFor="applyRateOverride" className="text-sm font-semibold text-white cursor-pointer">
+                  <label htmlFor="applyRateOverride" className="text-sm font-semibold text-gray-100 cursor-pointer">
                     Override Rate & Pricing
                   </label>
                 </div>
@@ -1354,7 +1354,7 @@ export default function VenueCalendarPage() {
                     className="w-4 h-4 rounded text-primary focus:ring-primary/40 border-surface-lighter"
                     disabled={batchFormData.isClosed}
                   />
-                  <label htmlFor="applyScheduleOverride" className={`text-sm font-semibold cursor-pointer ${batchFormData.isClosed ? "text-gray-500" : "text-white"}`}>
+                  <label htmlFor="applyScheduleOverride" className={`text-sm font-semibold cursor-pointer ${batchFormData.isClosed ? "text-gray-500" : "text-gray-100"}`}>
                     Override Operating Hours
                   </label>
                 </div>
@@ -1433,16 +1433,16 @@ export default function VenueCalendarPage() {
             <div className="p-4 bg-surface-light border border-surface-lighter rounded-xl space-y-3">
               <div>
                 <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">Event Title</span>
-                <span className="text-sm font-bold text-white block mt-0.5">{selectedReservation.eventTitle}</span>
+                <span className="text-sm font-bold text-gray-100 block mt-0.5">{selectedReservation.eventTitle}</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">Start Time</span>
-                  <span className="text-xs text-white font-medium block mt-0.5">{formatDateTime(selectedReservation.startTime)}</span>
+                  <span className="text-xs text-gray-100 font-medium block mt-0.5">{formatDateTime(selectedReservation.startTime)}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">End Time</span>
-                  <span className="text-xs text-white font-medium block mt-0.5">{formatDateTime(selectedReservation.endTime)}</span>
+                  <span className="text-xs text-gray-100 font-medium block mt-0.5">{formatDateTime(selectedReservation.endTime)}</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1452,7 +1452,7 @@ export default function VenueCalendarPage() {
                 </div>
                 <div>
                   <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">Venue</span>
-                  <span className="text-xs text-white font-medium block mt-0.5">{activeVenueName}</span>
+                  <span className="text-xs text-gray-100 font-medium block mt-0.5">{activeVenueName}</span>
                 </div>
               </div>
             </div>
@@ -1483,16 +1483,16 @@ export default function VenueCalendarPage() {
             <div className="p-4 bg-surface-light border border-surface-lighter rounded-xl space-y-3">
               <div>
                 <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">Lock Reason</span>
-                <span className="text-sm font-bold text-white block mt-0.5">{selectedBlockedSlot.reason || "Facility Maintenance / Holiday"}</span>
+                <span className="text-sm font-bold text-gray-100 block mt-0.5">{selectedBlockedSlot.reason || "Facility Maintenance / Holiday"}</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">Start Date/Time</span>
-                  <span className="text-xs text-white font-medium block mt-0.5">{formatDateTime(selectedBlockedSlot.startTime)}</span>
+                  <span className="text-xs text-gray-100 font-medium block mt-0.5">{formatDateTime(selectedBlockedSlot.startTime)}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">End Date/Time</span>
-                  <span className="text-xs text-white font-medium block mt-0.5">{formatDateTime(selectedBlockedSlot.endTime)}</span>
+                  <span className="text-xs text-gray-100 font-medium block mt-0.5">{formatDateTime(selectedBlockedSlot.endTime)}</span>
                 </div>
               </div>
             </div>
