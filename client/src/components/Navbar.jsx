@@ -28,8 +28,24 @@ export default function Navbar() {
             <span className="text-lg font-bold text-gray-100">Venue Reservation</span>
           </Link>
 
-          {/* Navigation Links Removed */}
-          <div className="hidden md:flex items-center gap-10"></div>
+          {/* Navigation Links (Visible only to guests and clients) */}
+          <div className="hidden md:flex items-center gap-10">
+            {(!isAuthenticated || user?.role === "CLIENT") && (
+              <>
+                <NavLink to="/" className={navClass} end>
+                  Home
+                </NavLink>
+                <NavLink to="/venues" className={navClass}>
+                  Venues
+                </NavLink>
+              </>
+            )}
+            {isAuthenticated && user?.role === "CLIENT" && (
+              <NavLink to="/my-reservations" className={navClass}>
+                My Reservations
+              </NavLink>
+            )}
+          </div>
 
           <div className="flex items-center gap-5">
             {isAuthenticated ? (

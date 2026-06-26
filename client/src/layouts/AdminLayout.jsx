@@ -6,11 +6,12 @@
 
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-import { LayoutDashboard, Users } from "lucide-react";
+import { LayoutDashboard, Users, MapPin } from "lucide-react";
 
 const adminNavItems = [
   { path: "/admin/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-[18px] w-[18px]" />, end: true },
   { path: "/admin/approved-managers", label: "Venue Managers", icon: <Users className="h-[18px] w-[18px]" /> },
+  { path: "/admin/locations", label: "Locations", icon: <MapPin className="h-[18px] w-[18px]" /> },
 ];
 
 export default function AdminLayout() {

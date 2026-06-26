@@ -46,13 +46,16 @@ import VenueCalendarPage from "../pages/venue-manager/VenueCalendarPage";
 // Admin pages
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
 import ApprovedManagersPage from "../pages/admin/ApprovedManagersPage";
+import LocationsPage from "../pages/admin/LocationsPage";
 
 const RootRedirect = () => {
   const { isAuthenticated, user } = useAuth();
   if (isAuthenticated && user) {
-    return <Navigate to={getDefaultPath(user.role)} replace />;
+    if (user.role === "VENUE_MANAGER" || user.role === "SYSTEM_ADMIN") {
+      return <Navigate to={getDefaultPath(user.role)} replace />;
+    }
   }
-  return <Navigate to="/login" replace />;
+  return <HomePage />;
 };
 
 export default function AppRoutes() {
@@ -137,6 +140,7 @@ export default function AppRoutes() {
       >
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
         <Route path="/admin/approved-managers" element={<ApprovedManagersPage />} />
+        <Route path="/admin/locations" element={<LocationsPage />} />
       </Route>
 
       {/* ─── 404 ─── */}
