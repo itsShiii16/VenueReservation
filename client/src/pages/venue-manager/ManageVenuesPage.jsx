@@ -1,23 +1,35 @@
+/**
+ * ManageVenuesPage.jsx — Venue manager's venue listing page
+ *
+ * Shows venue cards in a 2-column grid with the redesigned manager card layout.
+ * Includes: Add Venue button, Edit/Delete actions, and Assisted Booking modal.
+ */
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { venueService } from "../../services/venueService";
 import { reservationService } from "../../services/reservationService";
 import { useAuth } from "../../hooks/useAuth";
 import VenueCard from "../../components/VenueCard";
-import PageHeader from "../../components/PageHeader";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Input from "../../components/Input";
 import Select from "../../components/Select";
 import LoadingState from "../../components/LoadingState";
 import EmptyState from "../../components/EmptyState";
+import ConfirmDialog from "../../components/ConfirmDialog";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 
 export default function ManageVenuesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Delete confirmation state
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Assisted booking state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,6 +76,25 @@ export default function ManageVenuesPage() {
     }));
   };
 
+  const handleDelete = async (venueId) => {
+    setDeleteId(venueId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      await venueService.delete(deleteId);
+      toast.success("Venue deleted successfully.");
+      setVenues((prev) => prev.filter((v) => v.id !== deleteId));
+    } catch (err) {
+      toast.error(err.message || "Failed to delete venue.");
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
+    }
+  };
+
   const handleCreateAssistedBooking = async (e) => {
     e.preventDefault();
     setFormLoading(true);
@@ -94,17 +125,23 @@ export default function ManageVenuesPage() {
 
   return (
     <div>
-      <PageHeader title="Manage Venues" subtitle="Venues you are responsible for">
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsModalOpen(true)} disabled={venues.length === 0}>
-            Add Booking
-          </Button>
-          <Link to="/vm/venues/add">
-            <Button>Add Venue</Button>
-          </Link>
+      {/* Page Header */}
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900">Manage Venues</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Add, edit, or configure venue settings and requirements.
+          </p>
         </div>
-      </PageHeader>
+        <Link to="/vm/venues/add">
+          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-dark">
+            <Plus className="h-4 w-4" />
+            Add Venue
+          </button>
+        </Link>
+      </div>
 
+      {/* Venue Grid */}
       {loading ? (
         <LoadingState message="Loading your venues..." />
       ) : venues.length === 0 ? (
@@ -114,16 +151,29 @@ export default function ManageVenuesPage() {
           </Link>
         </EmptyState>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {venues.map((venue) => (
             <VenueCard
               key={venue.id}
               venue={venue}
               editUrl={`/vm/venues/${venue.id}/edit`}
+              onDelete={handleDelete}
             />
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+        title="Delete Venue"
+        message="Are you sure you want to delete this venue? This action cannot be undone. All associated reservations and blocked slots will also be removed."
+        confirmText={deleting ? "Deleting..." : "Delete"}
+        loading={deleting}
+        variant="danger"
+      />
 
       {/* Assisted Booking Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Booking" size="xl">

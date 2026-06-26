@@ -12,7 +12,7 @@ export default function VMDashboardPage() {
     { label: "My Venues", value: "2", link: "/vm/venues", color: "from-primary to-primary-dark" },
     { label: "Pending Requests", value: "3", link: "/vm/reservations", color: "from-warning to-amber-600" },
     { label: "Approved This Month", value: "8", link: "/vm/reservations", color: "from-success to-emerald-600" },
-    { label: "Blocked Slots", value: "2", link: "/vm/block-schedule", color: "from-danger to-red-600" },
+    { label: "Blocked Slots", value: "2", link: "/vm/calendar", color: "from-danger to-red-600" },
   ];
 
   return (
@@ -46,7 +46,7 @@ export default function VMDashboardPage() {
           <Link to="/vm/venues/add"><Button variant="secondary" size="sm">Add Venue</Button></Link>
           <Link to="/vm/venues"><Button variant="secondary" size="sm">Add Booking</Button></Link>
           <Link to="/vm/reservations"><Button variant="secondary" size="sm">View Requests</Button></Link>
-          <Link to="/vm/block-schedule"><Button variant="secondary" size="sm">Block Schedule</Button></Link>
+          <Link to="/vm/calendar"><Button variant="secondary" size="sm">Block Schedule</Button></Link>
           <Link to="/vm/calendar"><Button variant="secondary" size="sm">View Calendar</Button></Link>
         </div>
       </div>
