@@ -1,78 +1,36 @@
-# UPD Venue Reservation System
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Full-stack MVP for managing UP Diliman venue reservations.
+## Getting Started
 
-## Stack
-
-- Frontend: React + Vite + Tailwind CSS
-- Backend: Node.js + Express
-- Database: PostgreSQL
-- ORM: Prisma
-- Auth: JWT-ready backend, local demo auth in the frontend mock store
-
-## Project Structure
-
-```txt
-VenueReservation/
-  client/   React frontend
-  server/   Express API, Prisma schema, seed data
-```
-
-## Install
+First, run the development server:
 
 ```bash
-cd server
-npm install
-copy .env.example .env
-npx prisma migrate dev
-npm run seed
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-```bash
-cd client
-npm install
-npm run dev
-```
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-Frontend: `http://localhost:5173`  
-Backend: `http://localhost:5000` by default
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## Demo Accounts
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-All seeded/demo accounts use `password123`.
+## Learn More
 
-- System Admin: `admin@upd.edu.ph`
-- Venue Managers: `carlos@upd.edu.ph`, `sofia@upd.edu.ph`
-- Clients: `juan@upd.edu.ph`, `ana@upd.edu.ph`, `leo@upd.edu.ph`
+To learn more about Next.js, take a look at the following resources:
 
-## Roles
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-- Guest: browse venues, search, view details, and log in before reserving.
-- Client: submit requirements, monitor status, upload placeholder documents, and request cancellation.
-- Venue Manager: manage venues, review preliminary requests, accept pencil bookings, validate documents, manually track payment, block schedules, and add assisted bookings.
-- System Admin: create/edit/remove Venue Manager accounts, assign facilities or locations, and review system records.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Booking Workflow
+## Deploy on Vercel
 
-Venues that allow pencil booking start with `Preliminary Submitted`. Multiple clients may submit preliminary requirements for the same venue and slot. A Venue Manager accepts one request, which becomes `Pencil Booked / Draft`; competing preliminary requests for that same slot are rejected.
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Venues that do not allow pencil booking move directly to `Under Review` after full requirement submission.
-
-Payment is tracked manually only. The system does not process payments or store payment details. Managers move reservations through `Payment Pending`, `Payment Overdue`, and `Booked / Confirmed`.
-
-## Verification
-
-The current frontend build passes with:
-
-```bash
-cd client
-npm.cmd run build
-```
-
-The Prisma schema validates with:
-
-```bash
-cd server
-npx.cmd prisma validate
-```
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

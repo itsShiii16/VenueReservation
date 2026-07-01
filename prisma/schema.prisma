@@ -1,0 +1,245 @@
+// ──────────────────────────────────────────────────────────
+// Prisma Schema — UPD Venue Reservation System
+// ──────────────────────────────────────────────────────────
+// This file defines all database models, enums, and relations
+// for the VRS application using PostgreSQL.
+// ──────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────── Enums ─────────────
+
+enum Role {
+  CLIENT
+  VENUE_MANAGER
+  SYSTEM_ADMIN
+}
+
+enum ReservationStatus {
+  PRELIMINARY_SUBMITTED
+  UNDER_REVIEW
+  PENCIL_BOOKED_DRAFT
+  RETURNED_FOR_COMPLETION
+  EXPIRED_AUTO_REJECTED
+  PAYMENT_PENDING
+  PAYMENT_OVERDUE
+  BOOKED_CONFIRMED
+  REJECTED
+  CANCELLED
+  BLOCKED
+}
+
+enum BookingSource {
+  CLIENT_SUBMITTED
+  VENUE_MANAGER_ASSISTED
+}
+
+enum VenueManagerRequestStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+// ───────────── User ─────────────
+
+model User {
+  id           String   @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String   @unique
+  password     String   // Hashed with bcrypt
+  role         Role     @default(CLIENT)
+  organization String?
+  position     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  venues                Venue[]                @relation("VenueCreator")
+  reservations          Reservation[]          @relation("ReservationClient")
+  blockedSlots          BlockedSlot[]          @relation("BlockedSlotCreator")
+  venueManagerRequests  VenueManagerRequest[]  @relation("VMRequestClient")
+  reviewedRequests      VenueManagerRequest[]  @relation("VMRequestReviewer")
+  auditLogs             AuditLog[]
+  uploadedFiles         UploadedFile[]
+}
+
+// ───────────── Venue ─────────────
+
+model Venue {
+  id           String   @id @default(uuid())
+  name         String
+  location     String
+  capacity     Int
+  description  String?
+  managingUnit String?
+  amenities    String[] // Array of amenity strings
+  equipment    String[] // Array of equipment strings
+  rules        String?
+  allowsPencilBooking Boolean @default(false)
+  preliminaryRequirements String[]
+  supplementaryRequirements String[]
+  pencilBookingDays Int @default(3)
+  paymentDeadlineDays Int @default(5)
+  imageUrl     String?
+  isActive     Boolean  @default(true)
+  defaultRate  Float    @default(0.0)
+  defaultRateType String @default("HOURLY")
+  defaultOpenTime String @default("08:00")
+  defaultCloseTime String @default("17:00")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Foreign keys
+  createdById  String
+  createdBy    User     @relation("VenueCreator", fields: [createdById], references: [id])
+
+  // Relations
+  reservations Reservation[]
+  blockedSlots BlockedSlot[]
+  requirements Requirement[]
+  dateConfigs  VenueDateConfig[]
+}
+
+// ───────────── Reservation ─────────────
+
+model Reservation {
+  id                String            @id @default(uuid())
+  referenceNumber   String            @unique
+  eventTitle        String
+  activityType      String
+  expectedAttendees Int
+  startTime         DateTime
+  endTime           DateTime
+  status            ReservationStatus @default(UNDER_REVIEW)
+  bookingSource     BookingSource     @default(CLIENT_SUBMITTED)
+  notes             String?
+  declineReason     String?
+  returnRemarks     String?
+  paymentRemarks    String?
+  pencilBookingDeadline DateTime?
+  paymentDeadline   DateTime?
+  submittedAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  slots             Json?
+
+  // Foreign keys
+  clientId          String
+  client            User              @relation("ReservationClient", fields: [clientId], references: [id])
+  venueId           String
+  venue             Venue             @relation(fields: [venueId], references: [id])
+}
+
+// ───────────── BlockedSlot ─────────────
+
+model BlockedSlot {
+  id          String   @id @default(uuid())
+  startTime   DateTime
+  endTime     DateTime
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  // Foreign keys
+  venueId     String
+  venue       Venue    @relation(fields: [venueId], references: [id])
+  createdById String
+  createdBy   User     @relation("BlockedSlotCreator", fields: [createdById], references: [id])
+}
+
+// ───────────── VenueManagerRequest ─────────────
+// Clients submit these to request Venue Manager access.
+// System Admin reviews and approves/rejects them.
+
+model VenueManagerRequest {
+  id                    String                     @id @default(uuid())
+  officeOrOrganization  String
+  position              String
+  facilityToManage      String
+  reason                String
+  supportingDocumentUrl String?
+  status                VenueManagerRequestStatus  @default(PENDING_REVIEW)
+  remarks               String?
+  createdAt             DateTime                   @default(now())
+  reviewedAt            DateTime?
+
+  // Foreign keys
+  clientId              String
+  client                User                       @relation("VMRequestClient", fields: [clientId], references: [id])
+  reviewedById          String?
+  reviewedBy            User?                      @relation("VMRequestReviewer", fields: [reviewedById], references: [id])
+}
+
+// ───────────── Requirement ─────────────
+// Additional requirements/documents a venue may need for booking.
+
+model Requirement {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isRequired  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  // Foreign keys
+  venueId     String
+  venue       Venue    @relation(fields: [venueId], references: [id])
+}
+
+// ───────────── UploadedFile ─────────────
+
+model UploadedFile {
+  id          String   @id @default(uuid())
+  fileName    String
+  fileUrl     String
+  fileType    String?
+  fileSize    Int?     // Size in bytes
+  createdAt   DateTime @default(now())
+
+  // Foreign keys
+  uploadedById String
+  uploadedBy   User    @relation(fields: [uploadedById], references: [id])
+}
+
+// ───────────── AuditLog ─────────────
+// Tracks important actions for accountability.
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String   // e.g., "CREATE_VENUE", "APPROVE_RESERVATION"
+  entityType  String   // e.g., "Venue", "Reservation"
+  entityId    String
+  description String?
+  createdAt   DateTime @default(now())
+
+  // Foreign keys
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+// ───────────── VenueDateConfig ─────────────
+// Date-specific overrides for venue rates and schedules.
+
+model VenueDateConfig {
+  id          String   @id @default(uuid())
+  venueId     String
+  date        DateTime // YYYY-MM-DD (stored as DateTime at 00:00:00.000Z)
+  
+  rate        Float?
+  rateType    String?  // "HOURLY" or "FLAT"
+  openTime    String?  // "HH:MM"
+  closeTime   String?  // "HH:MM"
+  isClosed    Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, date])
+}
